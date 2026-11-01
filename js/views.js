@@ -147,6 +147,7 @@ V.beranda = () => {
   </section>
 
   ${todo.length ? `<section class="card"><div class="sec-h"><h2 class="sec-t">Yang perlu diurus</h2><small>${todo.length} hal</small></div>${todo.join('')}</section>` : ''}
+  ${V.kopiNudge()}
 
   <section class="card chart">
     <div class="sec-h"><h2 class="sec-t">Grafik untung</h2>
@@ -480,6 +481,28 @@ V.supplier = () => {
    ========================================================= */
 V.credit = () => `<a class="credit" href="https://instagram.com/ahmddzul" target="_blank" rel="noopener">${IG}<span>Dibuat oleh <b>@ahmddzul</b></span><span class="sr-only">(buka Instagram)</span></a>`;
 
+const SAWERIA = 'https://saweria.co/ahmddzul';
+const KOPI_KEY = 'aj_kopi_done';
+V.kopi = () => `<section class="card kopi">
+    <span class="kopi-ic">${I('cup')}</span>
+    <div><h2 class="sec-t">Beliin aku kopi?</h2>
+    <p>Arsip Jastip dibuat sendiri oleh @ahmddzul. Kalau aplikasi ini bikin urusan jastipmu lebih rapi, kamu bisa traktir kopi lewat Saweria. Semua fitur tetap bisa dipakai tanpa dukungan.</p>
+    <a class="btn ghost sm" href="${SAWERIA}" target="_blank" rel="noopener">${I('cup')} Traktir kopi di Saweria<span class="sr-only">(membuka Saweria)</span></a></div>
+  </section>`;
+/* Kartu sekali di Beranda: muncul setelah 10 tagihan lunas, hilang selamanya setelah diketuk atau ditutup */
+V.kopiNudge = () => {
+  if (Api.isDemo()) return '';
+  try { if (localStorage.getItem(KOPI_KEY)) return ''; } catch (e) { return ''; }
+  const lunas = Store.all('Pesanan').filter(o => o.bayar === 'lunas' && o.pelangganId !== SELF_ID && o.status !== 'batal').length;
+  if (lunas < 10) return '';
+  return `<section class="card kopi" id="kopiNudge">
+    <span class="kopi-ic">${I('cup')}</span>
+    <div><h2 class="sec-t">10 tagihan sudah lunas lewat Arsip Jastip</h2>
+    <p>Kalau aplikasi ini membantu, boleh traktir kopi pembuatnya.</p>
+    <div class="btn-row"><a class="btn primary sm" href="${SAWERIA}" target="_blank" rel="noopener" onclick="App.kopiDone(false)">${I('cup')} Traktir kopi<span class="sr-only">(membuka Saweria)</span></a><button class="btn ghost sm" type="button" onclick="App.kopiDone(true)">Nanti saja</button></div></div>
+  </section>`;
+};
+
 V.lainnya = () => {
   const ks = Store.all('Kiriman').filter(k => k.status !== 'diterima').length;
   return V.head('Lainnya')
@@ -490,8 +513,9 @@ V.lainnya = () => {
       <a class="tile" style="--i:3" href="#/pengaturan"><span class="stat-ic tone-warn">${I('gear')}</span><b>Pengaturan</b><small>Tema, nama, template, koneksi</small></a>
     </div>
     ${Store.meta.sheetUrl ? `<section class="card"><a class="menu-row" href="${E(Store.meta.sheetUrl)}" target="_blank" rel="noopener"><span class="todo-ic tone-ok">${I('table')}</span><div><b>Buka Google Sheet</b><small>Lihat dan backup data mentah</small></div>${I('chev', 'chev')}</a></section>` : ''}
+    ${V.kopi()}
     <div style="text-align:center;margin-top:22px">${LOGO('welcome-mini')}</div>
-    <p class="hint" style="text-align:center;margin:6px 0 0">Arsip Jastip · versi 2.1</p>
+    <p class="hint" style="text-align:center;margin:6px 0 0">Arsip Jastip · versi 2.2</p>
     ${V.credit()}`;
 };
 

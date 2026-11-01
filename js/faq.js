@@ -55,6 +55,7 @@ V.faq = () => {
     ${q('Bagaimana menyambungkan HP kedua?', 'Di HP pertama: Lainnya, Pengaturan, Kode sambung. Kirim kodenya ke WA sendiri. Di HP kedua, pasang aplikasi ke layar utama dulu, buka, lalu tempel kode itu di kolom Kode sambung.')}
     ${q('Apakah datanya aman?', 'Data hanya tersimpan di Google Sheet milikmu. Setiap permintaan ke Google Sheet wajib membawa kode kunci. Jangan bagikan kode kunci atau kode sambung ke orang lain. Kalau terlanjur tersebar, buat kode kunci baru dari menu Arsip Jastip di Google Sheet.')}
     ${q('Mau dipakai orang lain?', 'Bisa, dengan salinan sendiri. Orang lain membuat Google Sheet, Apps Script, dan GitHub Pages miliknya sendiri mengikuti README di GitHub. Data kalian tidak tercampur.')}
+    ${q('Apakah aplikasi ini berbayar?', `Gratis, dan semua fitur bisa dipakai tanpa bayar. Kalau Arsip Jastip membantu dan kamu mau mendukung pembuatnya, kamu bisa <a class="link" href="https://saweria.co/ahmddzul" target="_blank" rel="noopener">traktir kopi di Saweria<span class="sr-only"> (membuka Saweria)</span></a>.`)}
   </section>
   ${V.credit()}`;
 };

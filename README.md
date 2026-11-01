@@ -162,6 +162,10 @@ apps-script/Code.gs     server untuk Google Apps Script
 DESIGN.md               arah desain
 ```
 
+## Dukung pembuat
+
+Arsip Jastip gratis dan semua fiturnya bisa dipakai tanpa bayar. Kalau aplikasi ini bikin urusan jastipmu lebih rapi, kamu bisa traktir kopi lewat [Saweria](https://saweria.co/ahmddzul).
+
 ## Kredit
 
 Dibuat oleh **@ahmddzul** · [instagram.com/ahmddzul](https://instagram.com/ahmddzul)

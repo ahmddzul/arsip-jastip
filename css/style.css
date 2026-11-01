@@ -620,6 +620,14 @@ body.noscroll #toasts { bottom: auto; top: calc(var(--safe-t) + 12px); }
 .steps-list li:first-child { border-top: 0; }
 .steps-list li::before { content: counter(s); width: 28px; height: 28px; border-radius: var(--r-s); flex: none; display: grid; place-items: center; background: var(--acc); color: #fff; font-weight: 800; font-size: 13px; }
 
+a.link { color: var(--acc-ink); font-weight: 700; text-decoration: underline; text-underline-offset: 2px; }
+.kopi { display: flex; gap: 12px; align-items: flex-start; }
+.kopi p { margin: 4px 0 12px; color: var(--muted); font-size: 14px; line-height: 1.45; }
+.kopi .btn-row { margin: 0; flex-wrap: wrap; }
+.kopi .btn { white-space: nowrap; flex: 0 1 auto; }
+.kopi-ic { flex: none; width: 40px; height: 40px; border-radius: var(--r-m); display: grid; place-items: center; background: var(--acc-soft); color: var(--acc-ink); }
+.kopi-ic svg { width: 22px; height: 22px; }
+.kopi.leaving { opacity: 0; transform: translateY(6px); transition: opacity .2s var(--ease), transform .2s var(--ease); }
 .credit { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; margin: 18px auto 0; color: var(--muted); font-size: 13px; font-weight: 600; width: fit-content; padding: 0 12px; border-radius: 99px; }
 .credit b { color: var(--ink); }
 .credit svg { width: 20px; height: 20px; }

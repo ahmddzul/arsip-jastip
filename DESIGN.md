@@ -72,3 +72,9 @@ Semua animasi mati jika HP diatur "kurangi gerakan".
 ## Kredit
 
 - Dibuat oleh @ahmddzul, dengan logo Instagram, mengarah ke https://instagram.com/ahmddzul. Ditampilkan di menu Lainnya, halaman FAQ, dan layar sambutan.
+
+## Dukungan (Saweria)
+
+- Ajakan traktir kopi tidak boleh terasa memaksa: tidak ada pop-up, tidak ada pengingat berulang, dan selalu disebut bahwa semua fitur tetap gratis.
+- Tempat: kartu tetap di Lainnya, satu jawaban di FAQ, dan kartu sekali di Beranda setelah 10 tagihan lunas. Kartu Beranda hilang selamanya setelah diketuk atau ditutup.
+- Ikon cangkir kopi dengan warna tema, bukan logo Saweria.

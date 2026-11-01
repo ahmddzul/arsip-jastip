@@ -180,6 +180,14 @@ const App = {
   chat(cid) { const c = Store.get('Pelanggan', cid); if (c) UI.wa(c.wa, Text.sapa(c)); },
   copySisa(id) { const it = Store.get('Barang', id); if (it) UI.copy(Text.sisa(it), 'Teks barang sisa tersalin. Tempel di status atau grup'); },
   pickChip(btn, groupId) { document.querySelectorAll('#' + groupId + ' .chip').forEach(c => UI.on(c, c === btn)); },
+  kopiDone(close) {
+    try { localStorage.setItem(KOPI_KEY, '1'); } catch (e) { /* tetap disembunyikan sampai halaman dimuat ulang */ }
+    const el = document.getElementById('kopiNudge');
+    if (!el) return;
+    const next = el.nextElementSibling;
+    const done = () => { el.remove(); if (close) { const f = next && next.querySelector('a,button'); (f || document.getElementById('view')).focus(); } };
+    if (close && !matchMedia('(prefers-reduced-motion: reduce)').matches) { el.classList.add('leaving'); setTimeout(done, 220); } else setTimeout(done, close ? 0 : 400);
+  },
   setMode(m) { Theme.set('mode', m); this.refresh(); },
   setTheme(t) { Theme.set('theme', t); this.refresh(); UI.toast('Tema ' + (Theme.THEMES.find(x => x[0] === t) || [0, t])[1] + ' dipakai di HP ini'); },
 
