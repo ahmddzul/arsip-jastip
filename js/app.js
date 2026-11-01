@@ -51,6 +51,7 @@ const App = {
     view.className = 'view';
     const r = this.route;
     if (r.name === 'pesanan' && r.params.f) this.ui.pesanan.f = r.params.f;
+    if (r.name === 'barang' && !r.id && r.params.st) this.ui.barang.st = r.params.st;
 
     let html;
     if (this.loading && !Store.meta.lastPull && !Api.isDemo()) html = V.skeleton();
@@ -110,7 +111,7 @@ const App = {
   },
   setF(key, field, v) {
     this.ui[key][field] = v;
-    if (key === 'pesanan' && this.route.params.f) { history.replaceState(null, '', '#/pesanan'); this.route.params = {}; }
+    if (Object.keys(this.route.params).length) { history.replaceState(null, '', '#/' + this.route.name); this.route.params = {}; }
     this.render(false);
   },
   setPeriode(p) { this.ui.periode = p; this.refresh(); },
@@ -167,14 +168,16 @@ const App = {
   },
   copyAddr(cid) { const c = Store.get('Pelanggan', cid); if (c && c.alamat) UI.copy(`${c.nama}\n${c.wa || ''}\n${c.alamat}`.replace(/\n\n/g, '\n'), 'Alamat tersalin'); },
   copyResi(kid) { const k = Store.get('Kiriman', kid); if (k && k.resi) UI.copy(k.resi, 'Resi tersalin'); },
-  chat(cid) { const c = Store.get('Pelanggan', cid); if (c) UI.wa(c.wa, `Halo Kak ${c.nama} 👋`); },
+  chat(cid) { const c = Store.get('Pelanggan', cid); if (c) UI.wa(c.wa, Text.sapa(c)); },
+  copySisa(id) { const it = Store.get('Barang', id); if (it) UI.copy(Text.sisa(it), 'Teks barang sisa tersalin. Tempel di status atau grup 📦'); },
+  pickChip(btn, groupId) { document.querySelectorAll('#' + groupId + ' .chip').forEach(c => c.classList.toggle('on', c === btn)); },
 
   /* ---------- Pengaturan ---------- */
   saveSettings() {
     const v = id => document.getElementById(id).value;
     const nama = v('sNama').trim(), toko = v('sToko').trim();
     if (!nama) return UI.shake(document.getElementById('sNama'), 'Nama panggilannya diisi dulu ya');
-    const next = { namaPanggilan: nama, namaToko: toko || 'Jastip ' + nama, markupDefault: UI.num(v('sMarkup')) || 0, infoBayar: v('sBayar').trim(), penutupPromosi: v('sPenutup').trim() };
+    const next = { namaPanggilan: nama, namaToko: toko || 'Jastip ' + nama, markupDefault: UI.num(v('sMarkup')) || 0, infoBayar: v('sBayar').trim(), panggilanDefault: ((document.querySelector('#sPgl .chip.on') || {}).dataset || {}).p === '-' ? '' : ((document.querySelector('#sPgl .chip.on') || {}).dataset || {}).p || 'Kak' };
     Object.entries(next).forEach(([k, val]) => { if (Store.settings[k] !== val) Store.setSetting(k, val); });
     UI.toast(`Siap, Kak ${nama}! Pengaturan disimpan ✅`);
     this.refresh();

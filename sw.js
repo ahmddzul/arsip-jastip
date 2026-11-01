@@ -1,7 +1,7 @@
 /* Service worker: bikin aplikasi tetap bisa dibuka walau sinyal jelek.
    Data tetap diambil dari Google Sheet; yang disimpan di sini cuma tampilan aplikasinya.
    Kalau kamu mengubah file aplikasi, naikkan angka VERSION supaya HP mengambil versi baru. */
-const VERSION = 'jastip-v1';
+const VERSION = 'jastip-v2';
 const SHELL = [
   './', 'index.html', 'css/style.css', 'manifest.webmanifest',
   'js/ui.js', 'js/api.js', 'js/store.js', 'js/demo.js', 'js/views.js', 'js/sheets.js', 'js/app.js',
@@ -9,7 +9,7 @@ const SHELL = [
 ];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL.map(u => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', e => {

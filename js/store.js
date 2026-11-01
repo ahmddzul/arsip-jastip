@@ -12,7 +12,44 @@ const DEFAULT_SETTINGS = {
   namaToko: 'Jastip Syifa',
   markupDefault: 10000,
   penutupPromosi: 'Langsung reply nama + varian ya kak. Siapa cepat dia dapat! 🏃‍♀️',
-  infoBayar: ''
+  infoBayar: '',
+  panggilanDefault: 'Kak',
+  tplPromo: '',
+  tplSisa: '',
+  tplTagih: '',
+  tplSapa: '',
+  tplKirim: ''
+};
+
+const PANGGILAN = ['Kak', 'Mas', 'Mbak', 'Bu', 'Pak'];
+
+/* Template pesan: teks bawaan + kata kunci {…} yang diganti otomatis */
+const TEMPLATES = {
+  tplPromo: {
+    label: 'Teks promosi', icon: 'copy', hint: 'Tombol "Promosi" di halaman barang',
+    def: '✨ *JASTIP OPEN* ✨\n\n*{barang}*\n{keterangan}\n\n{harga}\n{diskon}\n\nLangsung reply nama + varian ya kak. Siapa cepat dia dapat! 🏃‍♀️',
+    vars: [['barang', 'Nama barang'], ['keterangan', 'Keterangan barang'], ['harga', 'Daftar harga'], ['diskon', 'Info diskon'], ['toko', 'Nama toko']]
+  },
+  tplSisa: {
+    label: 'Promosi barang sisa', icon: 'box', hint: 'Tombol "Tawarkan sisa" saat ada barang lebih',
+    def: '🔥 *READY STOCK* 🔥\n\n*{barang}*\n{keterangan}\n\n{sisa}\n\nMau? Langsung reply ya kak, siapa cepat dia dapat 🏃‍♀️',
+    vars: [['barang', 'Nama barang'], ['keterangan', 'Keterangan barang'], ['sisa', 'Sisa & harga'], ['toko', 'Nama toko']]
+  },
+  tplTagih: {
+    label: 'Tagihan', icon: 'wallet', hint: 'Tombol "Tagih via WA"',
+    def: 'Halo {sapaan} 👋\nIni rincian jastip dari {toko} ya:\n\n{rincian}\n\n*Total: {total}*\n\n{rekening}\n\nDitunggu transferannya ya. Makasih banyak 💜',
+    vars: [['sapaan', 'Panggilan + nama'], ['nama', 'Nama saja'], ['rincian', 'Rincian barang'], ['total', 'Total tagihan'], ['rekening', 'Info pembayaran'], ['toko', 'Nama toko']]
+  },
+  tplSapa: {
+    label: 'Sapa / chat', icon: 'chat', hint: 'Tombol "Chat" di pelanggan dan pesanan',
+    def: 'Halo {sapaan} 👋',
+    vars: [['sapaan', 'Panggilan + nama'], ['nama', 'Nama saja'], ['panggilan', 'Panggilan saja'], ['toko', 'Nama toko']]
+  },
+  tplKirim: {
+    label: 'Kabar kiriman', icon: 'truck', hint: 'Tombol "Kabari via WA" di kiriman',
+    def: 'Halo {sapaan} 👋\nPaket jastipnya {status_paket} ya 📦\n\n{kurir_resi}\n\nIsi paket:\n{isi_paket}\n\nMakasih udah jastip di {toko} 💜',
+    vars: [['sapaan', 'Panggilan + nama'], ['status_paket', 'dikirim / siap diambil'], ['kurir_resi', 'Kurir & resi'], ['isi_paket', 'Isi paket'], ['toko', 'Nama toko']]
+  }
 };
 
 const KATEGORI = [
@@ -88,6 +125,7 @@ const Store = {
     });
     this.meta.sheetUrl = data.sheetUrl || this.meta.sheetUrl;
     this.meta.lastPull = Date.now();
+    this.meta.serverVersion = data.serverVersion || 1;
     // terapkan lagi perubahan yang belum sempat terkirim
     Sync.queue.forEach(op => {
       if (op.op === 'upsert') this._put(op.table, op.row);
@@ -147,7 +185,23 @@ const Calc = {
   isUnpaid: o => o.status === 'dapat' && o.bayar !== 'lunas' && !Calc.isSelf(o),
   isReady: o => o.status === 'dapat' && o.bayar === 'lunas' && !o.kirimanId && !Calc.isSelf(o),
   isShipped: o => !!o.kirimanId,
-  isRefund: o => o.status === 'tidak' && o.bayar === 'lunas' && !o.solusi && !Calc.isSelf(o),
+  isRefund: o => (o.status === 'tidak' || o.status === 'batal') && o.bayar === 'lunas' && !o.solusi && !Calc.isSelf(o),
+
+  /* Stok: total yang didapat dari supplier per varian. Sisa = stok − yang sudah dibagi (status Dapat). */
+  stokOf(v) {
+    const dipakai = Store.all('Pesanan').filter(o => o.varianId === v.id && o.status === 'dapat').reduce((a, o) => a + (+o.qty || 0), 0);
+    const stok = +v.stokDapat || 0;
+    return { stok, dipakai, sisa: Math.max(0, stok - dipakai) };
+  },
+  sisaItem: itemId => Calc.variantsOf(itemId).map(v => ({ v, ...Calc.stokOf(v) })).filter(x => x.sisa > 0),
+  sisaAll: () => Store.all('Barang').map(b => ({ b, rows: Calc.sisaItem(b.id) })).filter(x => x.rows.length)
+    .map(x => ({ ...x, pcs: x.rows.reduce((a, r) => a + r.sisa, 0), modal: x.rows.reduce((a, r) => a + r.sisa * (+r.v.hargaModal || 0), 0) })),
+  /* Kalau ada pesanan ditandai Dapat melebihi stok tercatat, stok ikut naik (artinya barangnya memang ada). */
+  syncStok(varianId) {
+    const v = Store.get('Varian', varianId); if (!v) return;
+    const st = Calc.stokOf(v);
+    if (st.dipakai > st.stok) Store.upsert('Varian', { ...v, stokDapat: st.dipakai }, { quiet: true });
+  },
 
   inPeriod(iso, p) {
     if (p === 'semua') return true;
@@ -252,17 +306,94 @@ const Text = {
     if (h < 18) return { g: 'Selamat sore', e: '🌇' };
     return { g: 'Selamat malam', e: '🌙' };
   },
-  promo(it) {
-    const vs = Calc.variantsOf(it.id);
-    const L = ['✨ *JASTIP OPEN* ✨', '', `*${it.nama}*`];
-    if (it.deskripsi) L.push(it.deskripsi);
-    L.push('');
-    if (vs.length === 1) L.push(`💰 ${UI.rp(vs[0].hargaJual)}`);
-    else { L.push('💰 Harga:'); vs.forEach(v => L.push(`• ${v.nama}: ${UI.rp(v.hargaJual)}`)); }
-    if (it.diskonMin > 0 && it.diskonRp > 0) L.push(`🎁 Beli ${it.diskonMin} pcs atau lebih, hemat ${UI.rp(it.diskonRp)}/pcs`);
-    if (Store.settings.penutupPromosi) L.push('', Store.settings.penutupPromosi);
-    return L.join('\n').trim();
+  /* Ganti {kata_kunci}. Baris yang isinya cuma kata kunci kosong ikut dibuang. */
+  fill(tpl, vars) {
+    const re = /\{([a-z_]+)\}/g;
+    const lines = String(tpl || '').split('\n').map(line => {
+      let used = false, filled = false;
+      const out = line.replace(re, (m, k) => {
+        if (!(k in vars)) return m;
+        used = true;
+        const v = vars[k] == null ? '' : String(vars[k]);
+        if (v.trim()) filled = true;
+        return v;
+      });
+      if (used && !filled && !line.replace(re, '').trim()) return null;
+      return out;
+    }).filter(l => l !== null);
+    return lines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
   },
+  tpl(key) { return Store.settings[key] || TEMPLATES[key].def; },
+  panggilan(c) {
+    if (!c || c.isSelf || c.panggilan === '-') return '';
+    return c.panggilan || Store.settings.panggilanDefault || '';
+  },
+  sapaan(c) {
+    if (!c) return '';
+    const n = String(c.nama || '').trim(), p = Text.panggilan(c);
+    if (!p || /^(kak|ka|mas|mbak|mba|bu|ibu|pak|bapak|bang|teh|om|tante|cik|ci|ko|koh|mama|mami|papa)\b/i.test(n)) return n;
+    return p + ' ' + n;
+  },
+  rekening() { return Store.settings.infoBayar ? 'Pembayaran ke:\n' + Store.settings.infoBayar : ''; },
+  custVars(c) { return { sapaan: Text.sapaan(c), nama: c ? c.nama : '', panggilan: Text.panggilan(c), toko: Store.settings.namaToko }; },
+
+  promoVars(it) {
+    const vs = Calc.variantsOf(it.id);
+    return {
+      barang: it.nama, keterangan: it.deskripsi || '', toko: Store.settings.namaToko,
+      harga: vs.length === 1 ? `💰 ${UI.rp(vs[0].hargaJual)}` : ['💰 Harga:'].concat(vs.map(v => `• ${v.nama}: ${UI.rp(v.hargaJual)}`)).join('\n'),
+      diskon: it.diskonMin > 0 && it.diskonRp > 0 ? `🎁 Beli ${it.diskonMin} pcs atau lebih, hemat ${UI.rp(it.diskonRp)}/pcs` : ''
+    };
+  },
+  promo(it, tpl) { return Text.fill(tpl || Text.tpl('tplPromo'), Text.promoVars(it)); },
+  sisaVars(it) {
+    const rows = Calc.sisaItem(it.id), multi = Calc.variantsOf(it.id).length > 1;
+    return {
+      barang: it.nama, keterangan: it.deskripsi || '', toko: Store.settings.namaToko,
+      sisa: rows.map(r => multi ? `• ${r.v.nama}: ${r.sisa} pcs · ${UI.rp(r.v.hargaJual)}` : `💰 ${UI.rp(r.v.hargaJual)} · sisa ${r.sisa} pcs`).join('\n')
+    };
+  },
+  sisa(it, tpl) { return Text.fill(tpl || Text.tpl('tplSisa'), Text.sisaVars(it)); },
+  billVars(cid) {
+    const c = Store.get('Pelanggan', cid), b = Calc.billOf(cid);
+    if (!c || !b) return null;
+    const L = []; let n = 1;
+    b.orders.forEach(o => {
+      const it = Calc.item(o), vn = Calc.varName(o);
+      L.push(`${n++}. ${it ? it.nama : 'Barang'}${vn ? ` (${vn})` : ''} x${o.qty} = ${UI.rp(Calc.total(o))}`);
+      const hemat = (+o.diskon || 0) + Calc.autoDisc(o);
+      if (hemat) L.push(`    _sudah hemat ${UI.rp(hemat)}_`);
+    });
+    b.kiriman.forEach(k => L.push(`${n++}. Ongkir${k.kurir ? ' ' + k.kurir : ''} = ${UI.rp(k.ongkirTagih)}`));
+    return { ...Text.custVars(c), rincian: L.join('\n'), total: UI.rp(b.total), rekening: Text.rekening() };
+  },
+  bill(cid, tpl) { const v = Text.billVars(cid); return v ? Text.fill(tpl || Text.tpl('tplTagih'), v) : ''; },
+  sapa(c, tpl) { return Text.fill(tpl || Text.tpl('tplSapa'), Text.custVars(c)); },
+  shipVars(k) {
+    const c = Store.get('Pelanggan', k.pelangganId);
+    const os = Store.all('Pesanan').filter(o => o.kirimanId === k.id);
+    const pickup = k.kurir === 'Ambil sendiri';
+    return {
+      ...Text.custVars(c),
+      status_paket: pickup ? 'udah siap diambil' : 'udah dikirim',
+      kurir_resi: [!pickup && k.kurir ? `Kurir: ${k.kurir}` : '', k.resi ? `Resi: ${k.resi}` : ''].filter(Boolean).join('\n'),
+      isi_paket: os.map(o => { const it = Calc.item(o), vn = Calc.varName(o); return `• ${it ? it.nama : 'Barang'}${vn ? ` (${vn})` : ''} x${o.qty}`; }).join('\n')
+    };
+  },
+  ship(k, tpl) { return Text.fill(tpl || Text.tpl('tplKirim'), Text.shipVars(k)); },
+
+  /* Contoh isian untuk pratinjau template */
+  sampleVars() {
+    return {
+      barang: 'Tumbler Stainless 1L', keterangan: 'Tiba tgl 4 November', toko: Store.settings.namaToko,
+      harga: '💰 Harga:\n• Sage: Rp 90.000\n• Cream: Rp 90.000', diskon: '🎁 Beli 3 pcs atau lebih, hemat Rp 5.000/pcs',
+      sisa: '• Sage: 2 pcs · Rp 90.000',
+      sapaan: 'Kak Rina', nama: 'Rina', panggilan: 'Kak',
+      rincian: '1. Tumbler Stainless 1L (Sage) x2 = Rp 180.000\n2. Ongkir JNE = Rp 12.000', total: 'Rp 192.000', rekening: Text.rekening() || 'Pembayaran ke:\nBCA 1234567890 a.n. Nama Kamu',
+      status_paket: 'udah dikirim', kurir_resi: 'Kurir: JNE\nResi: JNE0012345678', isi_paket: '• Tumbler Stainless 1L (Sage) x2'
+    };
+  },
+
   list(it) {
     const vs = Calc.variantsOf(it.id);
     const os = Calc.ordersOf(it.id).filter(o => o.status !== 'batal' && !Calc.isSelf(o));
@@ -281,37 +412,6 @@ const Text = {
     if (os.some(o => o.status !== 'list')) L.push('✅ dapat   ❌ belum rezeki', '');
     L.push('Yang belum masuk list, reply aja ya kak 💜');
     return L.join('\n');
-  },
-  bill(cid) {
-    const c = Store.get('Pelanggan', cid), b = Calc.billOf(cid);
-    if (!c || !b) return '';
-    const L = [`Halo Kak ${c.nama} 👋`, `Ini rincian jastip dari ${Store.settings.namaToko} ya:`, ''];
-    let n = 1;
-    b.orders.forEach(o => {
-      const it = Calc.item(o), vn = Calc.varName(o);
-      L.push(`${n++}. ${it ? it.nama : 'Barang'}${vn ? ` (${vn})` : ''} x${o.qty} = ${UI.rp(Calc.total(o))}`);
-      const hemat = (+o.diskon || 0) + Calc.autoDisc(o);
-      if (hemat) L.push(`    _sudah hemat ${UI.rp(hemat)}_`);
-    });
-    b.kiriman.forEach(k => L.push(`${n++}. Ongkir${k.kurir ? ' ' + k.kurir : ''} = ${UI.rp(k.ongkirTagih)}`));
-    L.push('', `*Total: ${UI.rp(b.total)}*`);
-    if (Store.settings.infoBayar) L.push('', 'Pembayaran ke:', Store.settings.infoBayar);
-    L.push('', 'Ditunggu transferannya ya kak. Makasih banyak 💜');
-    return L.join('\n');
-  },
-  ship(k) {
-    const c = Store.get('Pelanggan', k.pelangganId);
-    const os = Store.all('Pesanan').filter(o => o.kirimanId === k.id);
-    const pickup = k.kurir === 'Ambil sendiri';
-    const L = [`Halo Kak ${c ? c.nama : ''} 👋`];
-    L.push(pickup ? 'Paket jastipnya udah siap diambil ya 📦' : 'Paket jastipnya udah dikirim ya 📦', '');
-    if (!pickup && k.kurir) L.push(`Kurir: ${k.kurir}`);
-    if (k.resi) L.push(`Resi: ${k.resi}`);
-    if (os.length) {
-      L.push('', 'Isi paket:');
-      os.forEach(o => { const it = Calc.item(o), vn = Calc.varName(o); L.push(`• ${it ? it.nama : 'Barang'}${vn ? ` (${vn})` : ''} x${o.qty}`); });
-    }
-    L.push('', `Makasih udah jastip di ${Store.settings.namaToko} 💜`);
-    return L.join('\n');
   }
+
 };

@@ -137,16 +137,23 @@ const Sheets = {
             diskonMin: UI.num(api.$('#bDMin').value), diskonRp: UI.num(api.$('#bDRp').value),
             status: it ? it.status : 'open', tanggal: it ? it.tanggal : UI.now()
           }, { quiet: true });
+          let modalSync = 0, jualSync = 0;
           const keep = valid.map(r => r.id);
           vs.forEach(v => { if (!keep.includes(v.id)) Store.remove('Varian', v.id, { quiet: true }); });
           valid.forEach((r, i) => {
             Store.upsert('Varian', { id: r.id, barangId: bid, nama: r.nama.trim() || 'Standar', hargaModal: r.modal, hargaJual: r.jual, urut: i + 1 }, { quiet: true });
-            // pesanan yang belum final ikut harga terbaru
-            Store.all('Pesanan').filter(o => o.varianId === r.id && o.status === 'list' && (o.hargaJual !== r.jual || o.hargaModal !== r.modal))
-              .forEach(o => Store.upsert('Pesanan', { ...o, hargaJual: r.jual, hargaModal: r.modal }, { quiet: true }));
+            // Modal selalu ikut harga terbaru (modal = biaya kamu, tidak memengaruhi tagihan).
+            // Harga jual ikut berubah hanya untuk pesanan yang belum lunas dan belum diberi harga khusus.
+            const old = vs.find(v => v.id === r.id);
+            Store.all('Pesanan').filter(o => o.varianId === r.id).forEach(o => {
+              const upd = {};
+              if (+o.hargaModal !== r.modal) upd.hargaModal = r.modal;
+              if (old && +old.hargaJual !== r.jual && +o.hargaJual === +old.hargaJual && o.bayar !== 'lunas') { upd.hargaJual = r.jual; jualSync++; }
+              if (Object.keys(upd).length) { modalSync += upd.hargaModal !== undefined ? 1 : 0; Store.upsert('Pesanan', { ...o, ...upd }, { quiet: true }); }
+            });
           });
           await api.close();
-          UI.toast(it ? 'Perubahan disimpan ✅' : 'Barang baru siap dijual! ✨');
+          UI.toast(!it ? 'Barang baru siap dijual! ✨' : jualSync ? `Disimpan ✅ Harga jual baru dipakai di ${jualSync} pesanan yang belum lunas` : modalSync ? `Disimpan ✅ Modal di ${modalSync} pesanan ikut diperbarui` : 'Perubahan disimpan ✅');
           if (it) App.refresh(); else App.go('#/barang/' + bid);
         };
 
@@ -235,6 +242,7 @@ const Sheets = {
         });
         api.$('#lRecent').addEventListener('click', e => {
           const b = e.target.closest('[data-c]'); if (!b) return;
+          if (sel && sel.id === b.dataset.c) { setSel(null); nameIn.value = ''; nameIn.focus(); return; }
           const c = b.dataset.c === SELF_ID ? (Store.ensureSelf(), Store.get('Pelanggan', SELF_ID)) : Store.get('Pelanggan', b.dataset.c);
           setSel(c);
         });
@@ -289,7 +297,7 @@ const Sheets = {
       title: (c ? c.nama : 'Pesanan') + (self ? ' 💜' : ''),
       html: `<div class="form">
         <a class="osum" href="#/barang/${o0.barangId}" onclick="event.preventDefault();App.go('#/barang/${o0.barangId}')">${V.thumb(it, 'thumb md')}<div style="flex:1;min-width:0"><b>${E(it ? it.nama : 'Barang terhapus')}</b><small>Dicatat ${UI.rel(o0.dibuat).toLowerCase()}</small></div>${I('chev', 'chev')}</a>
-        <div class="field"><span>Status barang</span><div class="seg st" id="oSt">${[['list', 'Nunggu'], ['dapat', 'Dapat'], ['tidak', 'Nggak dapat']].map(([v, l]) => `<button type="button" data-s="${v}">${l}</button>`).join('')}</div></div>
+        <div class="field"><span>Status barang</span><div class="seg st" id="oSt">${[['list', 'Nunggu'], ['dapat', 'Dapat'], ['tidak', 'Nggak dapat'], ['batal', 'Batal']].map(([v, l]) => `<button type="button" data-s="${v}">${l}</button>`).join('')}</div></div>
         ${self ? '' : `<div class="field"><span>Pembayaran</span><div class="seg" id="oPay"><button type="button" data-p="belum">Belum bayar</button><button type="button" data-p="lunas">Lunas</button></div></div>`}
         <div id="oSolusi"></div>
         ${vs.length > 1 ? `<label class="field"><span>Varian</span><select id="oVar">${vs.map(v => `<option value="${v.id}" ${v.id === o0.varianId ? 'selected' : ''}>${E(v.nama)} · ${UI.rp(v.hargaJual)}</option>`).join('')}</select></label>` : ''}
@@ -325,7 +333,7 @@ const Sheets = {
           const hemat = (+d.diskon || 0) + Calc.autoDisc(tmp);
           api.$('#oSub').textContent = hemat ? `sudah dipotong ${UI.rp(hemat)}` : (self ? '' : `untung ${UI.rp(Calc.profit(tmp))}`);
           const sol = api.$('#oSolusi');
-          if (d.status === 'tidak' && d.bayar === 'lunas' && !self) {
+          if ((d.status === 'tidak' || d.status === 'batal') && d.bayar === 'lunas' && !self) {
             sol.innerHTML = d.solusi
               ? `<div class="callout ok"><span>✓ ${d.solusi === 'refund' ? 'Uangnya sudah dikembalikan' : 'Sudah diganti barang lain'}</span><button class="link-btn" type="button" data-sol="">Batalkan</button></div>`
               : `<div class="callout bad"><b>Udah dibayar, tapi nggak dapat 😢</b>Mau diselesaikan gimana?<div class="btn-row"><button class="btn ghost sm" type="button" data-sol="refund">Uang dikembalikan</button><button class="btn ghost sm" type="button" data-sol="ganti">Ganti barang lain</button></div></div>`;
@@ -335,11 +343,14 @@ const Sheets = {
 
         api.$('#oSt').addEventListener('click', e => {
           const b = e.target.closest('[data-s]'); if (!b || b.dataset.s === d.status) return;
+          const was = d.status;
           d.status = b.dataset.s;
           d.tglDapat = d.status === 'dapat' ? (d.tglDapat || UI.now()) : '';
-          if (d.status !== 'tidak') d.solusi = '';
+          if (d.status !== 'tidak' && d.status !== 'batal') d.solusi = '';
           commit(); paint(); UI.haptic();
-          UI.toast(d.status === 'dapat' ? 'Yeay, dapat! 🎉' : d.status === 'tidak' ? 'Yah, belum rezeki 🥲' : 'Ditandai nunggu kabar');
+          if (d.status === 'dapat') Calc.syncStok(d.varianId);
+          const balik = was === 'dapat' && (d.status === 'batal' || d.status === 'tidak') && Calc.stokOf(Store.get('Varian', d.varianId) || {}).sisa;
+          UI.toast(d.status === 'dapat' ? 'Yeay, dapat! 🎉' : d.status === 'tidak' ? 'Yah, belum rezeki 🥲' : d.status === 'batal' ? 'Pesanan dibatalkan' + (balik ? ' · barangnya masuk ke sisa 📦' : '') : 'Ditandai nunggu kabar');
         });
         if (api.$('#oPay')) api.$('#oPay').addEventListener('click', e => {
           const b = e.target.closest('[data-p]'); if (!b || b.dataset.p === d.bayar) return;
@@ -407,12 +418,12 @@ const Sheets = {
       const ask = vo.reduce((a, o) => a + want(o), 0);
       const got = vo.filter(o => o.status === 'dapat').reduce((a, o) => a + (+o.qty || 0), 0);
       const decided = vo.some(o => o.status !== 'list');
-      return { v, vo, ask, def: decided ? got : ask };
-    }).filter(r => r.vo.length);
+      return { v, vo, ask, def: +v.stokDapat || (decided ? got : ask) };
+    });
 
     UI.sheet({
       title: 'Bagi jatah',
-      html: `<p class="hint">Isi berapa pcs yang kamu dapat dari supplier. Jatah dibagi sesuai urutan list, yang paling atas duluan. Setelah itu tetap bisa diubah satu-satu.</p>
+      html: `<p class="hint">Isi berapa pcs yang kamu dapat dari supplier. Jatah dibagi sesuai urutan list, yang paling atas duluan. Kalau kamu ambil lebih banyak dari yang minta, kelebihannya tercatat sebagai <b>barang sisa</b>.</p>
         <section class="card" style="margin-top:6px;padding:4px 16px">${rows.map(r => `<div class="jrow"><div><b>${vs.length > 1 ? E(r.v.nama) : 'Dapat berapa pcs?'}</b><small>${r.vo.length} orang minta ${r.ask} pcs</small></div>${UI.stepper('j_' + r.v.id, r.def, 0)}</div>`).join('')}</section>
         <div class="btn-row"><button class="btn ghost sm" type="button" data-all="1">Dapat semua</button><button class="btn ghost sm" type="button" data-all="0">Nggak dapat sama sekali</button></div>
         <button class="btn primary block" type="button" id="jGo" style="margin-top:14px">${I('pie')} Bagi sekarang</button>`,
@@ -422,9 +433,11 @@ const Sheets = {
           rows.forEach(r => { api.$('#j_' + r.v.id).value = b.dataset.all === '1' ? r.ask : 0; });
         });
         api.$('#jGo').onclick = async () => {
-          let nDapat = 0, nTidak = 0;
+          let nDapat = 0, nTidak = 0, nSisa = 0;
           rows.forEach(r => {
-            let left = UI.num(api.$('#j_' + r.v.id).value);
+            const stok = UI.num(api.$('#j_' + r.v.id).value);
+            let left = stok;
+            if (+r.v.stokDapat !== stok) Store.upsert('Varian', { ...r.v, stokDapat: stok }, { quiet: true });
             r.vo.forEach(o => {
               const w = want(o), n = { ...o };
               if (left >= w) { n.status = 'dapat'; n.qty = w; n.qtyMinta = 0; left -= w; }
@@ -433,10 +446,11 @@ const Sheets = {
               if (n.status === 'dapat') { n.tglDapat = o.tglDapat || UI.now(); nDapat++; } else { n.tglDapat = ''; nTidak++; }
               if (n.status !== o.status || n.qty !== o.qty || n.qtyMinta !== o.qtyMinta) Store.upsert('Pesanan', n, { quiet: true });
             });
+            nSisa += left;
           });
           await api.close();
           App.refresh();
-          UI.toast(`✨ ${nDapat} dapat, ${nTidak} belum rezeki`, '', { label: 'Salin list', fn: () => App.copyList(itemId) });
+          UI.toast(`✨ ${nDapat} dapat, ${nTidak} belum rezeki${nSisa ? `, sisa ${nSisa} pcs` : ''}`, '', { label: 'Salin list', fn: () => App.copyList(itemId) });
         };
       }
     });
@@ -450,6 +464,7 @@ const Sheets = {
       title: c ? 'Ubah data' : 'Pelanggan baru',
       html: `<div class="form">
         <label class="field"><span>Nama</span><input id="cNama" value="${E(c ? c.nama : preName)}" placeholder="Nama pelanggan" autocomplete="off"></label>
+        ${self ? '' : `<div class="field"><span>Panggilan</span><div class="chips wrap" id="cPgl">${['', ...PANGGILAN, '-'].map(p => `<button type="button" class="chip xs ${((c && c.panggilan) || '') === p ? 'on' : ''}" data-p="${p}">${p === '' ? `Default (${E(Store.settings.panggilanDefault || 'tanpa')})` : p === '-' ? 'Tanpa' : p}</button>`).join('')}</div><p class="hint" id="cPglHint"></p></div>`}
         ${self ? '' : `<label class="field"><span>Nomor WhatsApp</span><input id="cWa" type="tel" inputmode="tel" value="${E(c ? c.wa : '')}" placeholder="0812xxxxxxxx" autocomplete="off"></label>
         <label class="field"><span>Alamat kirim</span><textarea id="cAlamat" rows="3" placeholder="Jalan, nomor rumah, kecamatan, kota">${E(c ? c.alamat : '')}</textarea></label>`}
         <label class="field"><span>Catatan <em>(opsional)</em></span><input id="cNote" value="${E(c ? c.catatan : '')}" placeholder="Misal: suka barang Informa, transfer cepat" autocomplete="off"></label>
@@ -457,13 +472,19 @@ const Sheets = {
         ${c && !self ? `<button class="btn danger-ghost block" id="cDel" type="button">${I('trash')} Hapus pelanggan</button>` : ''}
       </div>`,
       onMount(api) {
+        let pgl = c ? (c.panggilan || '') : '';
+        const hint = () => { const h = api.$('#cPglHint'); if (h) h.textContent = `Akan disapa: "${Text.sapaan({ nama: api.$('#cNama').value.trim() || 'Nama', panggilan: pgl })}"`; };
+        if (api.$('#cPgl')) {
+          api.$('#cPgl').addEventListener('click', e => { const b = e.target.closest('[data-p]'); if (!b) return; pgl = b.dataset.p; api.$$('#cPgl .chip').forEach(x => x.classList.toggle('on', x === b)); hint(); });
+          api.$('#cNama').addEventListener('input', hint); hint();
+        }
         api.$('#cSave').onclick = async () => {
           const nama = api.$('#cNama').value.trim();
           if (!nama) return UI.shake(api.$('#cNama'), 'Namanya diisi dulu ya');
           const dup = Store.findCust(nama);
           if (dup && (!c || dup.id !== c.id)) return UI.shake(api.$('#cNama'), 'Nama ini sudah ada. Tambahkan pembeda, misal "Rina Bekasi".');
           const row = { ...(c || {}), id: c ? c.id : UI.uid('c'), nama, catatan: api.$('#cNote').value.trim(), isSelf: !!self };
-          if (!self) { row.wa = api.$('#cWa').value.trim(); row.alamat = api.$('#cAlamat').value.trim(); }
+          if (!self) { row.wa = api.$('#cWa').value.trim(); row.alamat = api.$('#cAlamat').value.trim(); row.panggilan = pgl; }
           Store.upsert('Pelanggan', row, { quiet: true });
           await api.close();
           UI.toast(c ? 'Data pelanggan diperbarui ✅' : `${nama} ditambahkan 👋`);
@@ -633,6 +654,87 @@ const Sheets = {
           const b = api.$('#syNow'); b.disabled = true; b.innerHTML = '<span class="spin"></span> Sinkron…';
           await App.pull(false, true);
           api.close();
+        };
+      }
+    });
+  },
+
+  /* ---------------- Template pesan ---------------- */
+  template(key) {
+    const t = TEMPLATES[key];
+    UI.sheet({
+      title: t.label,
+      html: `<div class="form">
+        <p class="hint" style="margin:0">${t.hint}. Ketuk kata kunci untuk menyisipkan. Saat dipakai, kata kunci otomatis diganti isi aslinya.</p>
+        <div class="chips wrap" id="tVars">${t.vars.map(([k, l]) => `<button type="button" class="chip xs" data-k="${k}">{${k}} <small>${l}</small></button>`).join('')}</div>
+        <textarea id="tTxt" rows="10" spellcheck="false">${E(Text.tpl(key))}</textarea>
+        <div class="field"><span>Pratinjau <em>(pakai contoh)</em></span><div class="callout info preview-text" id="tPrev" style="min-height:0"></div></div>
+        <div class="btn-row" style="margin-top:0"><button class="btn ghost" id="tReset" type="button">Kembalikan bawaan</button><button class="btn primary" id="tSave" type="button">Simpan</button></div>
+      </div>`,
+      onMount(api) {
+        const ta = api.$('#tTxt');
+        const prev = () => { api.$('#tPrev').textContent = Text.fill(ta.value, Text.sampleVars()) || '(kosong)'; };
+        ta.addEventListener('input', prev); prev();
+        api.$('#tVars').addEventListener('click', e => {
+          const b = e.target.closest('[data-k]'); if (!b) return;
+          const ins = '{' + b.dataset.k + '}';
+          const a = typeof ta.selectionStart === 'number' ? ta.selectionStart : ta.value.length, z = typeof ta.selectionEnd === 'number' ? ta.selectionEnd : a;
+          ta.value = ta.value.slice(0, a) + ins + ta.value.slice(z);
+          ta.focus(); ta.setSelectionRange(a + ins.length, a + ins.length); prev();
+        });
+        api.$('#tReset').onclick = () => { ta.value = t.def; prev(); UI.toast('Teks bawaan dipasang. Ketuk Simpan untuk memakai.'); };
+        api.$('#tSave').onclick = async () => {
+          const v = ta.value.trim();
+          if (!v) return UI.shake(ta, 'Teksnya jangan kosong ya');
+          Store.setSetting(key, v === t.def.trim() ? '' : v);
+          await api.close(); App.refresh();
+          UI.toast('Template disimpan ✅ Berlaku di kedua HP');
+        };
+      }
+    });
+  },
+
+  /* ---------------- Rincian untung per pesanan ---------------- */
+  untung(itemId) {
+    const all = Calc.ordersOf(itemId).filter(o => o.status !== 'batal');
+    const dapat = all.filter(o => o.status === 'dapat'), base = dapat.length ? dapat : all;
+    const rows = base.filter(o => !Calc.isSelf(o)), self = base.filter(Calc.isSelf);
+    const tot = rows.reduce((a, o) => a + Calc.profit(o), 0);
+    UI.sheet({
+      title: dapat.length ? 'Rincian untung' : 'Perkiraan untung',
+      html: `<p class="hint">${dapat.length ? 'Dari pesanan yang sudah dapat.' : 'Belum ada yang dapat, jadi dihitung dari semua yang list.'} Untung = (harga jual − modal) × jumlah − diskon.</p>
+        <section class="card" style="margin-top:6px">${rows.length ? rows.map(o => {
+          const c = Calc.cust(o), hemat = (+o.diskon || 0) + Calc.autoDisc(o);
+          return `<div class="mini-row" style="display:block" onclick="Sheets.order('${o.id}')"><div style="display:flex;justify-content:space-between;gap:10px"><span><b>${E(c ? c.nama : '-')}</b> · ${o.qty} pcs</span><b>${UI.rp(Calc.profit(o))}</b></div>
+            <small class="muted">(${UI.rp(o.hargaJual)} − modal ${UI.rp(o.hargaModal)}) × ${o.qty}${hemat ? ` − diskon ${UI.rp(hemat)}` : ''}</small></div>`;
+        }).join('') : '<p class="muted">Belum ada pesanan.</p>'}
+        <div class="total-box" style="margin-top:12px"><span>Total untung</span><b>${UI.rp(tot)}</b></div></section>
+        ${self.length ? `<p class="hint" style="margin-top:10px">💜 ${self.reduce((a, o) => a + (+o.qty || 0), 0)} pcs buat kamu sendiri tidak dihitung sebagai untung.</p>` : ''}`
+    });
+  },
+
+  /* ---------------- Stok dari supplier ---------------- */
+  stok(itemId) {
+    const vs = Calc.variantsOf(itemId);
+    UI.sheet({
+      title: 'Stok dari supplier',
+      html: `<p class="hint">Jumlah barang yang kamu pegang dari supplier, termasuk lebihan. Sisa = stok − yang sudah dibagi ke pembeli. Pesanan yang dibatalkan otomatis kembali jadi sisa.</p>
+        <section class="card" style="margin-top:6px;padding:4px 16px">${vs.map(v => {
+          const st = Calc.stokOf(v);
+          return `<div class="jrow"><div><b>${vs.length > 1 ? E(v.nama) : 'Total stok'}</b><small id="sk_${v.id}">${st.dipakai} sudah dibagi · sisa ${st.sisa}</small></div>${UI.stepper('st_' + v.id, Math.max(st.stok, st.dipakai), st.dipakai)}</div>`;
+        }).join('')}</section>
+        <button class="btn primary block" id="skSave" type="button" style="margin-top:14px">Simpan stok</button>`,
+      onMount(api) {
+        api.el.addEventListener('input', () => vs.forEach(v => {
+          const st = Calc.stokOf(v), n = UI.num(api.$('#st_' + v.id).value);
+          api.$('#sk_' + v.id).textContent = `${st.dipakai} sudah dibagi · sisa ${Math.max(0, n - st.dipakai)}`;
+        }));
+        api.$('#skSave').onclick = async () => {
+          vs.forEach(v => {
+            const st = Calc.stokOf(v), n = Math.max(st.dipakai, UI.num(api.$('#st_' + v.id).value));
+            if (n !== (+v.stokDapat || 0)) Store.upsert('Varian', { ...v, stokDapat: n }, { quiet: true });
+          });
+          await api.close(); App.refresh(); UI.toast('Stok disimpan 📦');
         };
       }
     });

@@ -25,7 +25,7 @@ const Demo = {
     put('Pelanggan', { id: SELF_ID, nama: 'Aku sendiri', wa: '', alamat: '', catatan: 'Barang yang aku list buat diri sendiri', isSelf: true, dibuat: ago(60) });
 
     put('Barang', { id: 'b1', nama: 'Tumbler Stainless 1L', kategori: 'Perabotan', supplierId: 's1', deskripsi: 'Tahan panas & dingin 12 jam', fotoUrl: '', fotoId: '', status: 'tutup', tanggal: ago(12), diskonMin: 3, diskonRp: 5000, dibuat: ago(12) });
-    put('Varian', { id: 'v1a', barangId: 'b1', nama: 'Sage', hargaModal: 75000, hargaJual: 90000, urut: 1 });
+    put('Varian', { id: 'v1a', barangId: 'b1', nama: 'Sage', hargaModal: 75000, hargaJual: 90000, urut: 1, stokDapat: 6 });
     put('Varian', { id: 'v1b', barangId: 'b1', nama: 'Cream', hargaModal: 75000, hargaJual: 90000, urut: 2 });
 
     put('Barang', { id: 'b2', nama: 'Rak Lipat Serbaguna', kategori: 'Informa', supplierId: 's2', deskripsi: '', fotoUrl: '', fotoId: '', status: 'open', tanggal: ago(2), diskonMin: 0, diskonRp: 0, dibuat: ago(2) });

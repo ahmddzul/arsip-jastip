@@ -40,7 +40,7 @@ V.stPill = o => ({
 
 V.payPill = o => {
   if (Calc.isSelf(o)) return '<span class="pill self">Buat aku</span>';
-  if (o.status === 'tidak' && o.bayar === 'lunas') {
+  if ((o.status === 'tidak' || o.status === 'batal') && o.bayar === 'lunas') {
     if (o.solusi === 'refund') return '<span class="pill">Di-refund</span>';
     if (o.solusi === 'ganti') return '<span class="pill">Diganti</span>';
     return '<span class="pill bad">Perlu refund</span>';
@@ -98,6 +98,11 @@ V.beranda = () => {
   if (bills.length) todo.push(V.todo('warn', 'chat', `Tagih ${bills.length} pelanggan`, `Total ${UI.rp(unpaid)}`, '#/pesanan?f=bayar'));
   if (readyC) todo.push(V.todo('info', 'truck', `${readyC} paket siap dikirim`, `${ready.length} pesanan udah lunas`, '#/pesanan?f=kirim'));
   if (packing.length) todo.push(V.todo('info', 'box', `${packing.length} paket masih dikemas`, 'Update resinya kalau udah dikirim', '#/kiriman'));
+  const sisaAll = Calc.sisaAll();
+  if (sisaAll.length) {
+    const pcs = sisaAll.reduce((a, x) => a + x.pcs, 0), modal = sisaAll.reduce((a, x) => a + x.modal, 0);
+    todo.push(V.todo('self', 'box', `Ada ${pcs} pcs barang sisa`, `${sisaAll.length} barang · modal ${UI.rp(modal)} · tawarkan lagi yuk`, '#/barang?st=sisa'));
+  }
   open.map(b => ({ b, n: os.filter(o => o.barangId === b.id && o.status === 'list').length }))
     .filter(x => x.n).slice(0, 4)
     .forEach(({ b, n }) => todo.push(V.todo('self', 'pie', b.nama, `${n} list nunggu dibagi jatah`, '#/barang/' + b.id)));
@@ -188,7 +193,7 @@ V.barang = () => {
   const f = App.ui.barang;
   return V.head('Barang', { sub: `${nOpen} PO lagi open` })
     + V.search('barang', 'Cari barang…')
-    + V.chips('barang', 'st', [['open', 'Lagi open', nOpen], ['tutup', 'Selesai', items.length - nOpen], ['semua', 'Semua', items.length]])
+    + V.chips('barang', 'st', [['open', 'Lagi open', nOpen], ['sisa', 'Ada sisa 📦', Calc.sisaAll().length], ['tutup', 'Selesai', items.length - nOpen], ['semua', 'Semua', items.length]].filter(([v, , n]) => v !== 'sisa' || n || f.st === 'sisa'))
     + `<div id="lst" class="list">${V.barangList()}</div>`
     + V.fab('Barang baru', 'Sheets.barang()');
 };
@@ -198,6 +203,7 @@ V.barangList = () => {
   let items = Store.all('Barang').slice().sort((a, b) => String(b.tanggal || b.dibuat).localeCompare(String(a.tanggal || a.dibuat)));
   if (f.st === 'open') items = items.filter(b => b.status !== 'tutup');
   if (f.st === 'tutup') items = items.filter(b => b.status === 'tutup');
+  if (f.st === 'sisa') items = items.filter(b => Calc.sisaItem(b.id).length);
   if (q) items = items.filter(b => {
     const su = Store.get('Supplier', b.supplierId);
     return [b.nama, b.kategori, su && su.nama].join(' ').toLowerCase().includes(q);
@@ -205,6 +211,7 @@ V.barangList = () => {
   if (!items.length) {
     if (q) return V.empty('🔍', 'Nggak ketemu', `Belum ada barang dengan kata "${E(q)}".`);
     if (!Store.all('Barang').length) return V.empty('🛍️', 'Belum ada barang', 'Dapat info barang baru dari supplier? Catat di sini, nanti teks promosinya langsung jadi.', `<button class="btn primary" type="button" onclick="Sheets.barang()">${I('plus')} Tambah barang pertama</button>`);
+    if (f.st === 'sisa') return V.empty('📦', 'Nggak ada barang sisa', 'Semua barang dari supplier sudah ada pemiliknya. Mantap!');
     return V.empty('🎉', f.st === 'open' ? 'Nggak ada PO yang open' : 'Belum ada yang selesai', f.st === 'open' ? 'Semua PO sudah ditutup. Mau buka PO baru?' : 'PO yang sudah ditutup akan muncul di sini.');
   }
   return items.map(it => {
@@ -215,10 +222,11 @@ V.barangList = () => {
     const price = !prices.length ? '' : min === max ? UI.rp(min) : `${UI.rp(min)} – ${UI.rp(max)}`;
     const su = Store.get('Supplier', it.supplierId);
     const tunggu = os.filter(o => o.status === 'list').length;
+    const sisa = Calc.sisaItem(it.id).reduce((a, r) => a + r.sisa, 0);
     return `<a class="icard" href="#/barang/${it.id}">
       ${V.thumb(it)}
       <div class="icard-m"><b>${E(it.nama)}</b><small>${E(su ? su.nama : 'Tanpa supplier')} · ${UI.rel(it.tanggal || it.dibuat)}</small><span class="price">${price}</span></div>
-      <div class="icard-r">${it.status === 'tutup' ? '<span class="pill">Selesai</span>' : tunggu ? `<span class="pill warn">${tunggu} nunggu</span>` : '<span class="pill info">Open</span>'}<small>${os.length} list</small></div>
+      <div class="icard-r">${it.status === 'tutup' ? '<span class="pill">Selesai</span>' : tunggu ? `<span class="pill warn">${tunggu} nunggu</span>` : '<span class="pill info">Open</span>'}${sisa ? `<span class="pill self">Sisa ${sisa}</span>` : `<small>${os.length} list</small>`}</div>
     </a>`;
   }).join('');
 };
@@ -230,8 +238,10 @@ V.barangDetail = id => {
   if (st.id !== id) { st.id = id; st.var = 'all'; st.reorder = false; }
   const vs = Calc.variantsOf(id);
   const all = Calc.ordersOf(id).filter(o => o.status !== 'batal');
+  const batal = Calc.ordersOf(id).filter(o => o.status === 'batal');
   const list = all.filter(o => st.var === 'all' || o.varianId === st.var);
   const su = Store.get('Supplier', it.supplierId);
+  const sisa = Calc.sisaItem(id), sisaPcs = sisa.reduce((a, r) => a + r.sisa, 0);
   const pcs = all.reduce((a, o) => a + (+o.qty || 0), 0);
   const dapat = all.filter(o => o.status === 'dapat');
   const dapatPcs = dapat.reduce((a, o) => a + (+o.qty || 0), 0);
@@ -254,10 +264,12 @@ V.barangDetail = id => {
       <button class="act" type="button" onclick="Sheets.jatah('${id}')">${I('pie')}Bagi jatah</button>
       <button class="act" type="button" onclick="App.toggleClose('${id}')">${I(closed ? 'refresh' : 'check')}${closed ? 'Buka lagi' : 'Tutup PO'}</button>
     </div>
+    ${sisaPcs ? `<section class="callout self" style="margin-top:14px"><b>📦 Kamu punya sisa ${sisaPcs} pcs</b>${sisa.map(r => `${vs.length > 1 ? E(r.v.nama) + ': ' : ''}${r.sisa} pcs`).join(' · ')} · modal ${UI.rp(sisa.reduce((a, r) => a + r.sisa * (+r.v.hargaModal || 0), 0))}
+      <div class="btn-row"><button class="btn ghost sm" type="button" onclick="Sheets.stok('${id}')">Ubah stok</button><button class="btn primary sm" type="button" onclick="App.copySisa('${id}')">${I('copy')} Tawarkan sisa</button></div></section>` : ''}
     <div class="kpis">
       <div class="kpi"><b>${pcs}</b><small>pcs di-list · ${new Set(all.map(o => o.pelangganId)).size} orang</small></div>
-      <div class="kpi"><b>${dapatPcs}</b><small>pcs dapat</small></div>
-      <div class="kpi"><b>${UI.rpShort(est)}</b><small>${dapat.length ? 'untung' : 'perkiraan untung'}</small></div>
+      <button class="kpi" type="button" style="text-align:left" onclick="Sheets.stok('${id}')"><b>${dapatPcs}${vs.some(v => +v.stokDapat) ? `<small style="font-weight:600"> / ${vs.reduce((a, v) => a + (+v.stokDapat || 0), 0)}</small>` : ''}</b><small>pcs dapat${vs.some(v => +v.stokDapat) ? ' / stok' : ''}</small></button>
+      <button class="kpi" type="button" style="text-align:left" onclick="Sheets.untung('${id}')"><b>${UI.rpShort(est)}</b><small>${dapat.length ? 'untung' : 'perkiraan untung'} · rincian ›</small></button>
     </div>
     <section class="card">
       <div class="sec-h"><h2 class="sec-t">Daftar list</h2>
@@ -268,7 +280,8 @@ V.barangDetail = id => {
       ${st.reorder ? '<p class="hint">Urutan paling atas dapat jatah duluan saat kamu bagi jatah.</p>' : ''}
       <div class="orows">${list.length ? list.map((o, i) => V.orderRow(o, { num: i + 1, reorder: st.reorder })).join('')
         : V.empty('📝', 'Belum ada yang list', 'Tulis nama-nama yang reply di status atau grup WA di sini.', `<button class="btn primary" type="button" onclick="Sheets.addList('${id}')">${I('plus')} Tambah list</button>`)}</div>
-    </section>`
+    </section>
+    ${batal.length ? `<h3 class="sec-label">Dibatalkan (${batal.length})</h3><section class="card" style="margin-top:0;opacity:.8"><div class="orows">${batal.map(o => V.orderRow(o)).join('')}</div></section>` : ''}`
   + (list.length ? V.fab('Tambah list', `Sheets.addList('${id}')`) : '');
 };
 
@@ -277,7 +290,7 @@ V.barangDetail = id => {
    ========================================================= */
 V.PESANAN_F = [
   ['semua', 'Semua'], ['tunggu', 'Nunggu kabar'], ['bayar', 'Belum bayar'], ['kirim', 'Siap kirim'],
-  ['jalan', 'Dikirim'], ['refund', 'Perlu refund'], ['aku', 'Buat aku 💜']
+  ['jalan', 'Dikirim'], ['refund', 'Perlu refund'], ['aku', 'Buat aku 💜'], ['batal', 'Batal']
 ];
 V.pesananFilter = f => ({
   semua: o => o.status !== 'batal',
@@ -286,7 +299,8 @@ V.pesananFilter = f => ({
   kirim: Calc.isReady,
   jalan: Calc.isShipped,
   refund: Calc.isRefund,
-  aku: o => Calc.isSelf(o) && o.status !== 'tidak' && o.status !== 'batal'
+  aku: o => Calc.isSelf(o) && o.status !== 'tidak' && o.status !== 'batal',
+  batal: o => o.status === 'batal'
 })[f] || (() => true);
 
 V.pesanan = () => {
@@ -391,7 +405,7 @@ V.pelangganDetail = id => {
 
   return V.head(self ? 'Buat aku sendiri' : 'Pelanggan', { back: '#/pelanggan', right: `<button class="icon-btn" type="button" onclick="Sheets.pelanggan('${id}')" aria-label="Ubah data pelanggan">${I('edit')}</button>` })
   + `<section class="card" style="margin-top:4px">
-      <div class="profile">${UI.ava(self ? '💜' : c.nama, 'lg')}<div><h2>${E(c.nama)}</h2><p>${self ? 'Barang yang kamu list buat diri sendiri' : `Pelanggan sejak ${UI.date(c.dibuat)}`}</p></div></div>
+      <div class="profile">${UI.ava(self ? '💜' : c.nama, 'lg')}<div><h2>${E(c.nama)}</h2><p>${self ? 'Barang yang kamu list buat diri sendiri' : `Disapa “${E(Text.sapaan(c))}” · pelanggan sejak ${UI.date(c.dibuat)}`}</p></div></div>
       ${!self ? `
       <div style="margin-top:12px">
         <div class="info-row">${I('phone')}<span>${c.wa ? E(c.wa) : '<em>Nomor WA belum diisi</em>'}</span>${c.wa ? `<button class="link-btn" type="button" onclick="App.chat('${id}')">Chat</button>` : `<button class="link-btn" type="button" onclick="Sheets.pelanggan('${id}')">Isi</button>`}</div>
@@ -472,7 +486,7 @@ V.lainnya = () => {
       <div class="menu-row"><span class="todo-ic tone-info">${I('list')}</span><div><b>Tempel banyak nama</b><small>Saat tambah list, pilih "Tempel banyak" untuk memasukkan nama dari grup sekaligus.</small></div></div>
       <div class="menu-row"><span class="todo-ic tone-warn">${I('chat')}</span><div><b>Tagihan sekali ketuk</b><small>Menu Pesanan → Belum bayar → Tagih via WA. Rinciannya sudah tersusun.</small></div></div>
     </section>
-    <p class="hint" style="text-align:center;margin-top:20px">${E(Store.settings.namaToko)} · versi 1.0</p>`;
+    <p class="hint" style="text-align:center;margin-top:20px">${E(Store.settings.namaToko)} · versi 1.1</p>`;
 };
 
 /* =========================================================
@@ -491,12 +505,18 @@ V.pengaturan = () => {
     <section class="card form" style="margin-top:0">
       <label class="field"><span>Untung default per barang</span><input id="sMarkup" data-money inputmode="numeric" value="${UI.dots(s.markupDefault)}"><p class="hint">Otomatis ditambahkan ke harga modal saat isi barang baru.</p></label>
       <label class="field"><span>Info pembayaran <em>(muncul di tagihan)</em></span><textarea id="sBayar" rows="2" placeholder="BCA 1234567890 a.n. Syifa">${E(s.infoBayar)}</textarea></label>
-      <label class="field"><span>Kalimat penutup promosi</span><textarea id="sPenutup" rows="2">${E(s.penutupPromosi)}</textarea></label>
+      <div class="field"><span>Panggilan default pelanggan baru</span><div class="chips wrap" id="sPgl">${PANGGILAN.concat(['-']).map(p => `<button type="button" class="chip xs ${(s.panggilanDefault || '-') === p ? 'on' : ''}" data-p="${p}" onclick="App.pickChip(this,'sPgl')">${p === '-' ? 'Tanpa panggilan' : p}</button>`).join('')}</div><p class="hint">Dipakai di tagihan dan sapaan, misal "${E(s.panggilanDefault || '')} Rina". Tiap pelanggan bisa diatur sendiri.</p></div>
     </section>
     <button class="btn primary block" type="button" style="margin-top:14px" onclick="App.saveSettings()">${I('check')} Simpan pengaturan</button>
 
+    <h3 class="sec-label">Template pesan</h3>
+    <section class="card" style="margin-top:0">
+      ${Object.entries(TEMPLATES).map(([k, t]) => `<button class="menu-row" type="button" onclick="Sheets.template('${k}')"><span class="todo-ic tone-info">${I(t.icon)}</span><div><b>${t.label}${s[k] ? ' <span class="pill self" style="height:20px;font-size:11px">diubah</span>' : ''}</b><small>${t.hint}</small></div>${I('chev', 'chev')}</button>`).join('')}
+    </section>
+
     <h3 class="sec-label">Koneksi Google Sheet</h3>
     <section class="card" style="margin-top:0">
+      ${!demo && cfg.url && (Store.meta.serverVersion || 1) < 2 ? `<div class="callout bad" style="margin-bottom:12px"><b>Code.gs perlu diperbarui</b>Panggilan pelanggan dan stok barang sisa belum tersimpan ke Google Sheet sampai Code.gs versi baru dipasang. Lihat panduan update.</div>` : ''}
       ${demo || !cfg.url ? `<p class="muted">Belum tersambung.</p><div class="btn-row"><button class="btn primary" type="button" onclick="Sheets.connect()">${I('link')} Sambungkan</button></div>`
       : `<div class="info-row" style="border-top:0">${I('cloud')}<span>Tersambung${Store.meta.lastPull ? ` · update ${UI.rel(new Date(Store.meta.lastPull).toISOString()).toLowerCase()} ${new Date(Store.meta.lastPull).toTimeString().slice(0, 5)}` : ''}</span></div>
         <div class="info-row">${I('link')}<span style="word-break:break-all;font-size:13px">${E(cfg.url.replace(/^(.{38}).+(.{10})$/, '$1…$2'))}</span></div>
