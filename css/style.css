@@ -50,6 +50,7 @@
 [data-theme="merah"]  { --acc: #C42A3F; --acc-deep: #9C1E31; --acc-ink: #C42A3F; --acc-soft: #FDE9EC; }
 [data-theme="oranye"] { --acc: #B14E0B; --acc-deep: #8C3B06; --acc-ink: #B14E0B; --acc-soft: #FDEEE2; }
 [data-theme="hijau"]  { --acc: #0E7A4D; --acc-deep: #0A5C3A; --acc-ink: #0E7A4D; --acc-soft: #E2F5EC; }
+[data-theme="pink"]   { --acc: #C2185B; --acc-deep: #93124A; --acc-ink: #C2185B; --acc-soft: #FCE8F1; }
 
 /* ---------- Token: mode gelap ---------- */
 [data-mode="dark"] {
@@ -75,6 +76,7 @@
 [data-mode="dark"][data-theme="merah"]  { --acc-ink: #FF98A5; }
 [data-mode="dark"][data-theme="oranye"] { --acc-ink: #FFAE6E; }
 [data-mode="dark"][data-theme="hijau"]  { --acc-ink: #6ED9A4; }
+[data-mode="dark"][data-theme="pink"]   { --acc-ink: #FF9CC6; }
 
 /* ---------- Dasar ---------- */
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -529,7 +531,7 @@ details.more[open] { padding-bottom: 12px; }
 .preview-text { white-space: pre-wrap; font-size: 14px; line-height: 1.5; min-height: 220px; }
 
 /* ---------- Pengaturan tampilan ---------- */
-.swatches { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.swatches { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .swatch { min-height: 64px; border: 1.5px solid var(--line); border-radius: var(--r-m); background: var(--card); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--ink2); }
 .swatch i { width: 22px; height: 22px; border-radius: 50%; }
 .swatch[aria-pressed="true"] { border-color: var(--acc-ink); background: var(--acc-soft); color: var(--ink); }
@@ -651,5 +653,4 @@ body.noscroll #toasts { bottom: auto; top: calc(var(--safe-t) + 12px); }
   .actions { grid-template-columns: repeat(2, 1fr); }
   .kpis { grid-template-columns: 1fr 1fr; }
   .hero-card .big { font-size: 28px; }
-  .swatches { grid-template-columns: repeat(3, 1fr); }
 }

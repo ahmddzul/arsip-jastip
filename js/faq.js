@@ -41,7 +41,7 @@ V.faq = () => {
     ${q('Pelanggan', 'Riwayat belanja tiap pelanggan, sapaan (Kak, Mas, Mbak, Bu, Pak), nomor WA, alamat, tagihan, dan resi kiriman. Pelanggan baru tercatat otomatis saat kamu menambah list.')}
     ${q('Kiriman & supplier', 'Kiriman menyimpan kurir, resi, ongkir yang ditagih, dan ongkir yang kamu bayar ke kurir. Supplier menyimpan kontak dan persentase seberapa sering barang didapat.')}
     ${q('Template pesan', 'Teks promosi, promosi barang sisa, tagihan, sapaan chat, dan kabar kiriman bisa kamu ubah sendiri di Pengaturan. Kata kunci seperti {sapaan} dan {total} otomatis diganti isi aslinya.')}
-    ${q('Tampilan', 'Mode terang, gelap, atau ikuti HP. Lima warna tema: Ungu, Biru, Merah, Oranye, dan Hijau. Pilihan ini tersimpan di masing-masing HP.')}
+    ${q('Tampilan', 'Mode terang, gelap, atau ikuti HP. Enam warna tema: Ungu, Biru, Merah, Oranye, Hijau, dan Pink. Pilihan ini tersimpan di masing-masing HP.')}
   </section>
 
   <h3 class="sec-label">Pertanyaan yang sering muncul</h3>

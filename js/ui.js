@@ -297,7 +297,7 @@ UI.countUp = (el, to, fmt) => {
 
 /* Tema & mode gelap, disimpan per HP */
 const Theme = {
-  THEMES: [['ungu', 'Ungu', '#6A45E0'], ['biru', 'Biru', '#2457D6'], ['merah', 'Merah', '#C42A3F'], ['oranye', 'Oranye', '#B14E0B'], ['hijau', 'Hijau', '#0E7A4D']],
+  THEMES: [['ungu', 'Ungu', '#6A45E0'], ['biru', 'Biru', '#2457D6'], ['merah', 'Merah', '#C42A3F'], ['oranye', 'Oranye', '#B14E0B'], ['hijau', 'Hijau', '#0E7A4D'], ['pink', 'Pink', '#C2185B']],
   get theme() { return localStorage.getItem('aj_theme') || 'ungu'; },
   get mode() { return localStorage.getItem('aj_mode') || 'auto'; },
   resolved() { return this.mode === 'auto' ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : this.mode; },

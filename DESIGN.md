@@ -25,7 +25,7 @@ Isi file ini disusun dari jawaban pemilik (@ahmddzul). Agen hanya merapikan form
 
 ## Warna
 
-- Lima tema dengan satu warna aksen solid per tema: Ungu (bawaan), Biru, Merah, Oranye, Hijau.
+- Enam tema dengan satu warna aksen solid per tema: Ungu (bawaan), Biru, Merah, Oranye, Hijau, Pink.
 - Gradien hanya dipakai di kartu ringkasan Beranda, dari warna aksen tua ke warna aksen. Alasannya: kartu itu satu-satunya titik fokus di Beranda.
 - Mode terang dan gelap. Bawaannya mengikuti pengaturan HP, dan bisa dipilih manual.
 - Status memakai warna tetap di semua tema: hijau (dapat/lunas), kuning tua (belum bayar), merah (perlu refund).
@@ -37,6 +37,7 @@ Isi file ini disusun dari jawaban pemilik (@ahmddzul). Agen hanya merapikan form
 | Merah | #C42A3F | #9C1E31 | #FF98A5 | 5,60:1 |
 | Oranye | #B14E0B | #8C3B06 | #FFAE6E | 5,30:1 |
 | Hijau | #0E7A4D | #0A5C3A | #6ED9A4 | 5,37:1 |
+| Pink | #C2185B | #93124A | #FF9CC6 | 5,87:1 |
 
 ## Huruf
 
