@@ -1,0 +1,317 @@
+'use strict';
+/* =========================================================
+   store.js — data lokal (cermin Google Sheet), hitungan bisnis,
+   dan teks siap kirim (promosi, list, tagihan, resi).
+   ========================================================= */
+
+const TABLES = ['Supplier', 'Barang', 'Varian', 'Pelanggan', 'Pesanan', 'Kiriman'];
+const SELF_ID = 'self';
+
+const DEFAULT_SETTINGS = {
+  namaPanggilan: 'Syifa',
+  namaToko: 'Jastip Syifa',
+  markupDefault: 10000,
+  penutupPromosi: 'Langsung reply nama + varian ya kak. Siapa cepat dia dapat! 🏃‍♀️',
+  infoBayar: ''
+};
+
+const KATEGORI = [
+  ['Makanan', '🍪'], ['Perabotan', '🪑'], ['Informa', '🛋️'],
+  ['Kosmetik', '💄'], ['Fashion', '👗'], ['Lainnya', '🛍️']
+];
+const KURIR = ['JNE', 'J&T', 'SiCepat', 'AnterAja', 'GoSend', 'GrabExpress', 'Antar sendiri', 'Ambil sendiri'];
+
+UI.katEmoji = k => (KATEGORI.find(x => x[0] === k) || [0, '🛍️'])[1];
+
+const Store = {
+  db: Object.fromEntries(TABLES.map(t => [t, []])),
+  settings: { ...DEFAULT_SETTINGS },
+  meta: { sheetUrl: '', lastPull: 0 },
+
+  load() {
+    try {
+      const j = JSON.parse(localStorage.getItem('jt_db') || 'null');
+      if (!j) return;
+      TABLES.forEach(t => { this.db[t] = (j.db && j.db[t]) || []; });
+      Object.assign(this.settings, j.settings || {});
+      Object.assign(this.meta, j.meta || {});
+    } catch (e) { /* cache rusak: abaikan */ }
+  },
+  save() {
+    try { localStorage.setItem('jt_db', JSON.stringify({ db: this.db, settings: this.settings, meta: this.meta })); }
+    catch (e) { UI.toast('Memori HP penuh. Coba bersihkan foto lama di Pengaturan.', 'bad'); }
+  },
+  wipe() {
+    TABLES.forEach(t => { this.db[t] = []; });
+    this.settings = { ...DEFAULT_SETTINGS };
+    this.meta = { sheetUrl: '', lastPull: 0 };
+    this.save();
+  },
+  hasData() { return TABLES.some(t => this.db[t].length); },
+
+  all(t) { return this.db[t]; },
+  get(t, id) { return this.db[t].find(r => r.id === id); },
+
+  _put(t, row) {
+    const a = this.db[t], i = a.findIndex(r => r.id === row.id);
+    if (i >= 0) { a[i] = { ...a[i], ...row }; return a[i]; }
+    a.push(row); return row;
+  },
+  upsert(t, row, opt = {}) {
+    const exists = !!this.get(t, row.id);
+    const now = UI.now();
+    row = { ...row, diubah: now };
+    if (!exists && !row.dibuat) row.dibuat = now;
+    const full = this._put(t, row);
+    this.save();
+    Sync.push({ op: 'upsert', table: t, row: { ...full } });
+    if (!opt.quiet) App.refresh();
+    return full;
+  },
+  remove(t, id, opt = {}) {
+    this.db[t] = this.db[t].filter(r => r.id !== id);
+    this.save();
+    Sync.push({ op: 'remove', table: t, id });
+    if (!opt.quiet) App.refresh();
+  },
+  setSetting(k, v) {
+    this.settings[k] = v;
+    this.save();
+    Sync.push({ op: 'setting', key: k, value: v });
+  },
+
+  applyRemote(data) {
+    TABLES.forEach(t => { this.db[t] = (data.tables && data.tables[t]) || []; });
+    const s = data.settings || {};
+    Object.keys(DEFAULT_SETTINGS).forEach(k => {
+      if (s[k] !== undefined) this.settings[k] = typeof DEFAULT_SETTINGS[k] === 'number' ? (UI.num(s[k]) || DEFAULT_SETTINGS[k]) : s[k];
+    });
+    this.meta.sheetUrl = data.sheetUrl || this.meta.sheetUrl;
+    this.meta.lastPull = Date.now();
+    // terapkan lagi perubahan yang belum sempat terkirim
+    Sync.queue.forEach(op => {
+      if (op.op === 'upsert') this._put(op.table, op.row);
+      else if (op.op === 'remove') this.db[op.table] = this.db[op.table].filter(r => r.id !== op.id);
+      else if (op.op === 'setting') this.settings[op.key] = op.value;
+    });
+    this.save();
+  },
+
+  /* Pelanggan khusus "Aku sendiri" untuk barang yang kamu list sendiri */
+  ensureSelf() {
+    if (!this.get('Pelanggan', SELF_ID)) {
+      this.upsert('Pelanggan', { id: SELF_ID, nama: 'Aku sendiri', wa: '', alamat: '', catatan: 'Barang yang aku list buat diri sendiri', isSelf: true }, { quiet: true });
+    }
+  },
+  findCust(name) {
+    const n = String(name || '').trim().toLowerCase();
+    if (!n) return null;
+    return this.all('Pelanggan').find(c => !c.isSelf && String(c.nama).trim().toLowerCase() === n) || null;
+  },
+  ensureCust(name) {
+    return this.findCust(name) || this.upsert('Pelanggan', { id: UI.uid('c'), nama: String(name).trim(), wa: '', alamat: '', catatan: '', isSelf: false }, { quiet: true });
+  }
+};
+
+/* =========================================================
+   Hitungan bisnis
+   ========================================================= */
+const Calc = {
+  item: o => Store.get('Barang', o.barangId),
+  varian: o => Store.get('Varian', o.varianId),
+  cust: o => Store.get('Pelanggan', o.pelangganId),
+  isSelf: o => { if (o.pelangganId === SELF_ID) return true; const c = Calc.cust(o); return !!(c && c.isSelf); },
+
+  variantsOf: itemId => Store.all('Varian').filter(v => v.barangId === itemId).sort((a, b) => (a.urut || 0) - (b.urut || 0)),
+  ordersOf: itemId => Store.all('Pesanan').filter(o => o.barangId === itemId)
+    .sort((a, b) => (a.urut || 0) - (b.urut || 0) || String(a.dibuat).localeCompare(String(b.dibuat))),
+  ordersOfCust: cid => Store.all('Pesanan').filter(o => o.pelangganId === cid)
+    .sort((a, b) => String(b.dibuat).localeCompare(String(a.dibuat))),
+  varName: o => { const v = Calc.varian(o); return v && v.nama !== 'Standar' ? v.nama : ''; },
+
+  /* Diskon otomatis: total beli pelanggan di barang ini >= minimal → potong per pcs */
+  autoDisc(o) {
+    const it = Calc.item(o);
+    if (!it || !(it.diskonMin > 0) || !(it.diskonRp > 0)) return 0;
+    const q = Store.all('Pesanan')
+      .filter(x => x.barangId === o.barangId && x.pelangganId === o.pelangganId && x.status !== 'tidak' && x.status !== 'batal')
+      .reduce((s, x) => s + (+x.qty || 0), 0);
+    return q >= it.diskonMin ? (+o.qty || 0) * it.diskonRp : 0;
+  },
+  gross: o => (+o.qty || 0) * (+o.hargaJual || 0),
+  total: o => Math.max(0, Calc.gross(o) - (+o.diskon || 0) - Calc.autoDisc(o)),
+  modal: o => (+o.qty || 0) * (+o.hargaModal || 0),
+  profit: o => Calc.total(o) - Calc.modal(o),
+
+  isWaiting: o => o.status === 'list',
+  isUnpaid: o => o.status === 'dapat' && o.bayar !== 'lunas' && !Calc.isSelf(o),
+  isReady: o => o.status === 'dapat' && o.bayar === 'lunas' && !o.kirimanId && !Calc.isSelf(o),
+  isShipped: o => !!o.kirimanId,
+  isRefund: o => o.status === 'tidak' && o.bayar === 'lunas' && !o.solusi && !Calc.isSelf(o),
+
+  inPeriod(iso, p) {
+    if (p === 'semua') return true;
+    const d = new Date(iso); if (isNaN(d)) return false;
+    const now = new Date();
+    if (p === 'minggu') { const from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6); return d >= from; }
+    if (p === '30') { const from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 29); return d >= from; }
+    if (p === 'bulan') return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+    return true;
+  },
+  soldDate: o => o.tglDapat || o.diubah || o.dibuat,
+
+  summary(p) {
+    let omzet = 0, untung = 0, pcs = 0, self = 0;
+    Store.all('Pesanan').forEach(o => {
+      if (o.status !== 'dapat' || !Calc.inPeriod(Calc.soldDate(o), p)) return;
+      if (Calc.isSelf(o)) { self += Calc.modal(o); return; }
+      omzet += Calc.total(o); untung += Calc.profit(o); pcs += +o.qty || 0;
+    });
+    let ongkir = 0;
+    Store.all('Kiriman').forEach(k => {
+      if (Calc.inPeriod(k.tanggal || k.dibuat, p)) ongkir += (+k.ongkirTagih || 0) - (+k.ongkirBiaya || 0);
+    });
+    return { omzet, untung: untung + ongkir, untungBarang: untung, ongkir, pcs, self };
+  },
+
+  bills() {
+    const m = {};
+    const add = id => m[id] || (m[id] = { pelangganId: id, orders: [], kiriman: [], total: 0 });
+    Store.all('Pesanan').forEach(o => { if (Calc.isUnpaid(o)) { const b = add(o.pelangganId); b.orders.push(o); b.total += Calc.total(o); } });
+    Store.all('Kiriman').forEach(k => {
+      if ((+k.ongkirTagih || 0) > 0 && !k.ongkirLunas && k.pelangganId !== SELF_ID) { const b = add(k.pelangganId); b.kiriman.push(k); b.total += +k.ongkirTagih; }
+    });
+    return Object.values(m).sort((a, b) => b.total - a.total);
+  },
+  billOf: cid => Calc.bills().find(b => b.pelangganId === cid) || null,
+
+  series(mode) {
+    const now = new Date(), out = [];
+    if (mode === 'hari') {
+      const H = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+      for (let i = 6; i >= 0; i--) { const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i); out.push({ k: UI.ymd(d), l: i === 0 ? 'Hari ini' : H[d.getDay()], v: 0 }); }
+    } else {
+      for (let i = 5; i >= 0; i--) { const d = new Date(now.getFullYear(), now.getMonth() - i, 1); out.push({ k: d.getFullYear() + '-' + d.getMonth(), l: UI.BULAN[d.getMonth()], v: 0 }); }
+    }
+    const key = iso => { const d = new Date(iso); if (isNaN(d)) return ''; return mode === 'hari' ? UI.ymd(d) : d.getFullYear() + '-' + d.getMonth(); };
+    const idx = Object.fromEntries(out.map((x, i) => [x.k, i]));
+    Store.all('Pesanan').forEach(o => {
+      if (o.status !== 'dapat' || Calc.isSelf(o)) return;
+      const i = idx[key(Calc.soldDate(o))]; if (i !== undefined) out[i].v += Calc.profit(o);
+    });
+    Store.all('Kiriman').forEach(k => {
+      const i = idx[key(k.tanggal || k.dibuat)]; if (i !== undefined) out[i].v += (+k.ongkirTagih || 0) - (+k.ongkirBiaya || 0);
+    });
+    return out;
+  },
+
+  topItems(p, n = 5) {
+    const m = {};
+    Store.all('Pesanan').forEach(o => {
+      if (o.status !== 'dapat' || Calc.isSelf(o) || !Calc.inPeriod(Calc.soldDate(o), p)) return;
+      const x = m[o.barangId] || (m[o.barangId] = { id: o.barangId, untung: 0, pcs: 0 });
+      x.untung += Calc.profit(o); x.pcs += +o.qty || 0;
+    });
+    return Object.values(m).filter(x => Store.get('Barang', x.id)).sort((a, b) => b.untung - a.untung).slice(0, n);
+  },
+  topCustomers(p, n = 5) {
+    const m = {};
+    Store.all('Pesanan').forEach(o => {
+      if (o.status !== 'dapat' || Calc.isSelf(o) || !Calc.inPeriod(Calc.soldDate(o), p)) return;
+      const x = m[o.pelangganId] || (m[o.pelangganId] = { id: o.pelangganId, belanja: 0, n: 0 });
+      x.belanja += Calc.total(o); x.n++;
+    });
+    return Object.values(m).filter(x => Store.get('Pelanggan', x.id)).sort((a, b) => b.belanja - a.belanja).slice(0, n);
+  },
+  supplierRate(sid) {
+    let dapat = 0, tidak = 0;
+    Store.all('Pesanan').forEach(o => {
+      const it = Calc.item(o); if (!it || it.supplierId !== sid) return;
+      if (o.status === 'dapat') dapat += +o.qty || 0;
+      else if (o.status === 'tidak') tidak += +o.qty || 0;
+    });
+    const tot = dapat + tidak;
+    return { dapat, tidak, tot, rate: tot ? Math.round(dapat / tot * 100) : null };
+  },
+  custStats(cid) {
+    let belanja = 0, untung = 0, n = 0;
+    Calc.ordersOfCust(cid).forEach(o => { if (o.status === 'dapat') { belanja += Calc.total(o); untung += Calc.profit(o); n++; } });
+    return { belanja, untung, n };
+  }
+};
+
+/* =========================================================
+   Teks siap kirim
+   ========================================================= */
+const Text = {
+  greet() {
+    const h = new Date().getHours();
+    if (h < 4) return { g: 'Masih melek nih', e: '🌙' };
+    if (h < 11) return { g: 'Selamat pagi', e: '☀️' };
+    if (h < 15) return { g: 'Selamat siang', e: '🌤️' };
+    if (h < 18) return { g: 'Selamat sore', e: '🌇' };
+    return { g: 'Selamat malam', e: '🌙' };
+  },
+  promo(it) {
+    const vs = Calc.variantsOf(it.id);
+    const L = ['✨ *JASTIP OPEN* ✨', '', `*${it.nama}*`];
+    if (it.deskripsi) L.push(it.deskripsi);
+    L.push('');
+    if (vs.length === 1) L.push(`💰 ${UI.rp(vs[0].hargaJual)}`);
+    else { L.push('💰 Harga:'); vs.forEach(v => L.push(`• ${v.nama}: ${UI.rp(v.hargaJual)}`)); }
+    if (it.diskonMin > 0 && it.diskonRp > 0) L.push(`🎁 Beli ${it.diskonMin} pcs atau lebih, hemat ${UI.rp(it.diskonRp)}/pcs`);
+    if (Store.settings.penutupPromosi) L.push('', Store.settings.penutupPromosi);
+    return L.join('\n').trim();
+  },
+  list(it) {
+    const vs = Calc.variantsOf(it.id);
+    const os = Calc.ordersOf(it.id).filter(o => o.status !== 'batal' && !Calc.isSelf(o));
+    const row = (o, i) => {
+      const c = Calc.cust(o);
+      const mark = o.status === 'dapat' ? ' ✅' : o.status === 'tidak' ? ' ❌' : '';
+      return `${i + 1}. ${c ? c.nama : '-'}${o.qty > 1 ? ` (${o.qty})` : ''}${mark}`;
+    };
+    const L = [`📝 *LIST ${String(it.nama).toUpperCase()}*`, ''];
+    if (vs.length > 1) {
+      vs.forEach(v => {
+        const vo = os.filter(o => o.varianId === v.id); if (!vo.length) return;
+        L.push(`*${v.nama}*`); vo.forEach((o, i) => L.push(row(o, i))); L.push('');
+      });
+    } else { os.forEach((o, i) => L.push(row(o, i))); L.push(''); }
+    if (os.some(o => o.status !== 'list')) L.push('✅ dapat   ❌ belum rezeki', '');
+    L.push('Yang belum masuk list, reply aja ya kak 💜');
+    return L.join('\n');
+  },
+  bill(cid) {
+    const c = Store.get('Pelanggan', cid), b = Calc.billOf(cid);
+    if (!c || !b) return '';
+    const L = [`Halo Kak ${c.nama} 👋`, `Ini rincian jastip dari ${Store.settings.namaToko} ya:`, ''];
+    let n = 1;
+    b.orders.forEach(o => {
+      const it = Calc.item(o), vn = Calc.varName(o);
+      L.push(`${n++}. ${it ? it.nama : 'Barang'}${vn ? ` (${vn})` : ''} x${o.qty} = ${UI.rp(Calc.total(o))}`);
+      const hemat = (+o.diskon || 0) + Calc.autoDisc(o);
+      if (hemat) L.push(`    _sudah hemat ${UI.rp(hemat)}_`);
+    });
+    b.kiriman.forEach(k => L.push(`${n++}. Ongkir${k.kurir ? ' ' + k.kurir : ''} = ${UI.rp(k.ongkirTagih)}`));
+    L.push('', `*Total: ${UI.rp(b.total)}*`);
+    if (Store.settings.infoBayar) L.push('', 'Pembayaran ke:', Store.settings.infoBayar);
+    L.push('', 'Ditunggu transferannya ya kak. Makasih banyak 💜');
+    return L.join('\n');
+  },
+  ship(k) {
+    const c = Store.get('Pelanggan', k.pelangganId);
+    const os = Store.all('Pesanan').filter(o => o.kirimanId === k.id);
+    const pickup = k.kurir === 'Ambil sendiri';
+    const L = [`Halo Kak ${c ? c.nama : ''} 👋`];
+    L.push(pickup ? 'Paket jastipnya udah siap diambil ya 📦' : 'Paket jastipnya udah dikirim ya 📦', '');
+    if (!pickup && k.kurir) L.push(`Kurir: ${k.kurir}`);
+    if (k.resi) L.push(`Resi: ${k.resi}`);
+    if (os.length) {
+      L.push('', 'Isi paket:');
+      os.forEach(o => { const it = Calc.item(o), vn = Calc.varName(o); L.push(`• ${it ? it.nama : 'Barang'}${vn ? ` (${vn})` : ''} x${o.qty}`); });
+    }
+    L.push('', `Makasih udah jastip di ${Store.settings.namaToko} 💜`);
+    return L.join('\n');
+  }
+};
