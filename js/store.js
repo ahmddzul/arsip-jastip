@@ -8,8 +8,8 @@ const TABLES = ['Supplier', 'Barang', 'Varian', 'Pelanggan', 'Pesanan', 'Kiriman
 const SELF_ID = 'self';
 
 const DEFAULT_SETTINGS = {
-  namaPanggilan: 'Syifa',
-  namaToko: 'Jastip Syifa',
+  namaPanggilan: '',
+  namaToko: '',
   markupDefault: 10000,
   penutupPromosi: 'Langsung reply nama + varian ya kak. Siapa cepat dia dapat! 🏃‍♀️',
   infoBayar: '',
@@ -53,12 +53,13 @@ const TEMPLATES = {
 };
 
 const KATEGORI = [
-  ['Makanan', '🍪'], ['Perabotan', '🪑'], ['Informa', '🛋️'],
-  ['Kosmetik', '💄'], ['Fashion', '👗'], ['Lainnya', '🛍️']
+  ['Makanan', 'food'], ['Perabotan', 'chair'], ['Informa', 'sofa'],
+  ['Kosmetik', 'lipstick'], ['Fashion', 'shirt'], ['Lainnya', 'bag']
 ];
 const KURIR = ['JNE', 'J&T', 'SiCepat', 'AnterAja', 'GoSend', 'GrabExpress', 'Antar sendiri', 'Ambil sendiri'];
 
-UI.katEmoji = k => (KATEGORI.find(x => x[0] === k) || [0, '🛍️'])[1];
+UI.katIcon = k => (KATEGORI.find(x => x[0] === k) || [0, 'bag'])[1];
+const tokoName = () => Store.settings.namaToko || (Store.settings.namaPanggilan ? 'Jastip ' + Store.settings.namaPanggilan : 'Arsip Jastip');
 
 const Store = {
   db: Object.fromEntries(TABLES.map(t => [t, []])),
@@ -335,12 +336,12 @@ const Text = {
     return p + ' ' + n;
   },
   rekening() { return Store.settings.infoBayar ? 'Pembayaran ke:\n' + Store.settings.infoBayar : ''; },
-  custVars(c) { return { sapaan: Text.sapaan(c), nama: c ? c.nama : '', panggilan: Text.panggilan(c), toko: Store.settings.namaToko }; },
+  custVars(c) { return { sapaan: Text.sapaan(c), nama: c ? c.nama : '', panggilan: Text.panggilan(c), toko: tokoName() }; },
 
   promoVars(it) {
     const vs = Calc.variantsOf(it.id);
     return {
-      barang: it.nama, keterangan: it.deskripsi || '', toko: Store.settings.namaToko,
+      barang: it.nama, keterangan: it.deskripsi || '', toko: tokoName(),
       harga: vs.length === 1 ? `💰 ${UI.rp(vs[0].hargaJual)}` : ['💰 Harga:'].concat(vs.map(v => `• ${v.nama}: ${UI.rp(v.hargaJual)}`)).join('\n'),
       diskon: it.diskonMin > 0 && it.diskonRp > 0 ? `🎁 Beli ${it.diskonMin} pcs atau lebih, hemat ${UI.rp(it.diskonRp)}/pcs` : ''
     };
@@ -349,7 +350,7 @@ const Text = {
   sisaVars(it) {
     const rows = Calc.sisaItem(it.id), multi = Calc.variantsOf(it.id).length > 1;
     return {
-      barang: it.nama, keterangan: it.deskripsi || '', toko: Store.settings.namaToko,
+      barang: it.nama, keterangan: it.deskripsi || '', toko: tokoName(),
       sisa: rows.map(r => multi ? `• ${r.v.nama}: ${r.sisa} pcs · ${UI.rp(r.v.hargaJual)}` : `💰 ${UI.rp(r.v.hargaJual)} · sisa ${r.sisa} pcs`).join('\n')
     };
   },
@@ -385,7 +386,7 @@ const Text = {
   /* Contoh isian untuk pratinjau template */
   sampleVars() {
     return {
-      barang: 'Tumbler Stainless 1L', keterangan: 'Tiba tgl 4 November', toko: Store.settings.namaToko,
+      barang: 'Tumbler Stainless 1L', keterangan: 'Tiba tgl 4 November', toko: tokoName(),
       harga: '💰 Harga:\n• Sage: Rp 90.000\n• Cream: Rp 90.000', diskon: '🎁 Beli 3 pcs atau lebih, hemat Rp 5.000/pcs',
       sisa: '• Sage: 2 pcs · Rp 90.000',
       sapaan: 'Kak Rina', nama: 'Rina', panggilan: 'Kak',

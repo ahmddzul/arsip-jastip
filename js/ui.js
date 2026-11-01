@@ -39,8 +39,24 @@ const ICONS = {
   tag: '<path d="M3.5 12.6V4.5a1 1 0 0 1 1-1h8.1l8 8a1.5 1.5 0 0 1 0 2.1l-6.9 6.9a1.5 1.5 0 0 1-2.1 0z"/><circle cx="8" cy="8" r="1.3"/>',
   cloud: '<path d="M7 18.5a4.5 4.5 0 0 1-.6-9A6 6 0 0 1 18 8.6a4.5 4.5 0 0 1-.5 9.9z"/>',
   image: '<rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><circle cx="9" cy="10" r="1.8"/><path d="M20.5 16l-5-5-9 8.5"/>',
-  user: '<circle cx="12" cy="8" r="4"/><path d="M4.5 20.5c.9-4 3.9-6.3 7.5-6.3s6.6 2.3 7.5 6.3"/>'
+  user: '<circle cx="12" cy="8" r="4"/><path d="M4.5 20.5c.9-4 3.9-6.3 7.5-6.3s6.6 2.3 7.5 6.3"/>',
+  info2: '<circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5M12 7.5h.01"/>',
+  clock: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
+  help: '<circle cx="12" cy="12" r="8.5"/><path d="M9.6 9.4a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.2-2.4 3.7M12 17h.01"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6 6 6M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4"/>',
+  moon: '<path d="M19.5 14.5A8 8 0 0 1 9.5 4.5a8 8 0 1 0 10 10z"/>',
+  auto: '<rect x="3.5" y="4.5" width="17" height="12" rx="2"/><path d="M8.5 20h7M12 16.5V20"/>',
+  food: '<path d="M4 11.5h16a8 8 0 0 1-16 0z"/><path d="M9 4.5c-.8.8-.8 2 0 3M13 4.5c-.8.8-.8 2 0 3"/>',
+  chair: '<path d="M7 3.5h10v8H7z"/><path d="M5.5 11.5h13v3h-13zM7 14.5V21M17 14.5V21"/>',
+  sofa: '<path d="M5 10V7.5A2.5 2.5 0 0 1 7.5 5h9A2.5 2.5 0 0 1 19 7.5V10"/><path d="M3 12a2 2 0 0 1 4 0v2h10v-2a2 2 0 0 1 4 0v5H3z"/><path d="M5 17v2.5M19 17v2.5"/>',
+  lipstick: '<path d="M9 11.5h6v9H9z"/><path d="M10 11.5V6.5l4-3v8"/>',
+  shirt: '<path d="M8.5 3.5 4 6l1.6 4H7.5v10.5h9V10h1.9L20 6l-4.5-2.5a3.5 3.5 0 0 1-7 0z"/>',
+  bag: '<path d="M5 8h14l-1 12.5H6z"/><path d="M9 10V7a3 3 0 0 1 6 0v3"/>'
 };
+
+/* Logo kotak arsip. Warna mengikuti tema lewat currentColor. */
+const LOGO = (cls = '') => `<svg class="${cls}" viewBox="0 0 96 96" aria-hidden="true"><rect width="96" height="96" rx="24" fill="currentColor"/><rect x="22" y="25" width="52" height="13" rx="3.5" style="fill:var(--logo-in,#fff)"/><rect x="26" y="40" width="44" height="34" rx="4.5" style="fill:var(--logo-in,#fff)"/><rect x="39" y="49" width="18" height="6" rx="3" fill="currentColor"/></svg>`;
+const IG = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><path d="M17.5 6.5h.01"/></svg>';
 
 const UI = {
   BULAN: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'],
@@ -48,7 +64,7 @@ const UI = {
   _ignorePop: 0,
 
   icon(n, cls = '') {
-    return `<svg class="ic ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n] || ''}</svg>`;
+    return `<svg class="ic ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n] || ''}</svg>`;
   },
   esc(s) {
     return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -59,7 +75,7 @@ const UI = {
   rp(n) { n = Math.round(+n || 0); return (n < 0 ? '-' : '') + 'Rp ' + UI.dots(n); },
   rpShort(n) {
     n = +n || 0; const a = Math.abs(n), sg = n < 0 ? '-' : '';
-    const f = x => (Math.round(x * 10) / 10).toString().replace('.', ',');
+    const f = x => (Math.round(x * 10) / 10).toString().replace('.',',');
     if (a >= 1e9) return sg + f(a / 1e9) + ' M';
     if (a >= 1e6) return sg + f(a / 1e6) + ' jt';
     if (a >= 1e3) return sg + Math.round(a / 1e3) + ' rb';
@@ -88,9 +104,7 @@ const UI = {
   /* ---- Nama & avatar ---- */
   initials(n) { const p = String(n || '?').trim().split(/\s+/); return ((p[0] || '?')[0] + (p[1] ? p[1][0] : '')).toUpperCase(); },
   ava(name, cls = '') {
-    let h = 0; for (const ch of String(name || '')) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-    const hue = [228, 252, 270, 196, 168, 330, 24][h % 7];
-    return `<span class="ava ${cls}" style="background:hsl(${hue} 85% 95%);color:hsl(${hue} 55% 38%)">${UI.esc(UI.initials(name))}</span>`;
+    return `<span class="ava ${cls}" aria-hidden="true">${UI.esc(UI.initials(name))}</span>`;
   },
 
   /* ---- WhatsApp & clipboard ---- */
@@ -103,7 +117,7 @@ const UI = {
     const url = `https://wa.me/${UI.waNum(number)}?text=${encodeURIComponent(text || '')}`;
     window.open(url, '_blank', 'noopener');
   },
-  async copy(text, msg = 'Tersalin! Tinggal tempel ✨') {
+  async copy(text, msg = 'Tersalin! Tinggal tempel') {
     let ok = false;
     try { await navigator.clipboard.writeText(text); ok = true; } catch (e) { /* fallback di bawah */ }
     if (!ok) {
@@ -115,6 +129,9 @@ const UI = {
     }
     UI.toast(msg);
   },
+  /* Status terpilih: kelas .on + aria-pressed supaya tidak hanya dibedakan lewat warna */
+  on(el, v) { if (!el) return; el.classList.toggle('on', !!v); if (el.tagName === 'BUTTON') el.setAttribute('aria-pressed', String(!!v)); },
+  syncPressed(root) { root.querySelectorAll('.chips button.chip, .seg button').forEach(b => b.setAttribute('aria-pressed', String(b.classList.contains('on')))); },
   haptic() { try { navigator.vibrate && navigator.vibrate(8); } catch (e) { /* abaikan */ } },
 
   /* ---- Toast ---- */
@@ -143,7 +160,7 @@ const UI = {
     const w = document.createElement('div');
     w.className = 'sheet-wrap ' + cls;
     w.innerHTML = `<div class="sheet-bg"></div>
-      <section class="sheet" role="dialog" aria-modal="true" aria-label="${UI.esc(title)}">
+      <section class="sheet" role="dialog" aria-modal="true" aria-label="${UI.esc(title)}" tabindex="-1">
         <div class="grip"></div>
         <header class="sheet-h"><h2>${UI.esc(title)}</h2><button class="icon-btn sm" type="button" data-x aria-label="Tutup">${UI.icon('x')}</button></header>
         <div class="sheet-b">${html}</div>
@@ -151,13 +168,15 @@ const UI = {
     root.appendChild(w);
     document.body.classList.add('noscroll');
 
-    const api = { el: w.querySelector('.sheet'), body: w.querySelector('.sheet-b'), closed: false, onClose: null };
+    const api = { el: w.querySelector('.sheet'), body: w.querySelector('.sheet-b'), closed: false, onClose: null, opener: document.activeElement };
     api.$ = s => api.el.querySelector(s);
     api.$$ = s => [...api.el.querySelectorAll(s)];
     api.close = fromPop => new Promise(res => {
       if (api.closed) return res();
       api.closed = true;
+      w.classList.add('closing');
       w.classList.remove('open');
+      if (api.opener && document.contains(api.opener) && api.opener.focus) setTimeout(() => api.opener.focus({ preventScroll: true }), 30);
       UI.sheets = UI.sheets.filter(x => x !== api);
       if (!UI.sheets.length) document.body.classList.remove('noscroll');
       setTimeout(() => w.remove(), 280);
@@ -170,9 +189,11 @@ const UI = {
     history.pushState({ sheet: true }, '');
     UI.sheets.push(api);
     requestAnimationFrame(() => requestAnimationFrame(() => w.classList.add('open')));
+    setTimeout(() => { if (!api.el.contains(document.activeElement)) api.el.focus({ preventScroll: true }); }, 60);
     UI.moneyInputs(api.el);
     UI.steppers(api.el);
     if (onMount) onMount(api);
+    UI.syncPressed(api.el);
     return api;
   },
   async closeAll() { while (UI.sheets.length) await UI.sheets[UI.sheets.length - 1].close(); },
@@ -228,6 +249,67 @@ const UI = {
     });
   }
 };
+
+/* Keyboard: Escape menutup sheet teratas, Tab berputar di dalam sheet,
+   Enter/Spasi mengaktifkan elemen role="button" */
+document.addEventListener('keydown', e => {
+  const top = UI.sheets[UI.sheets.length - 1];
+  if (e.key === 'Escape' && top) { e.preventDefault(); top.close(); return; }
+  if (e.key === 'Tab' && top) {
+    const f = [...top.el.querySelectorAll('a[href],button:not([disabled]),input:not([type=hidden]):not([hidden]),select,textarea,summary,[tabindex]:not([tabindex="-1"])')].filter(x => x.offsetParent !== null);
+    if (!f.length) return;
+    const first = f[0], last = f[f.length - 1];
+    if (e.shiftKey && (document.activeElement === first || document.activeElement === top.el)) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    return;
+  }
+  const t = e.target;
+  if ((e.key === 'Enter' || e.key === '') && t && t.getAttribute && t.getAttribute('role') === 'button' && t.tagName !== 'BUTTON') {
+    e.preventDefault(); t.click();
+  }
+});
+
+/* Konfeti kecil untuk momen penting (dapat, lunas, bagi jatah) */
+UI.confetti = (x, y) => {
+  if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const box = document.createElement('div'); box.className = 'confetti'; box.setAttribute('aria-hidden', 'true');
+  const cs = getComputedStyle(document.documentElement);
+  const colors = [cs.getPropertyValue('--acc').trim(), '#F2B705', '#1FA971', '#FF6B81', '#4CC3FF'];
+  const cx = x == null ? innerWidth / 2 : x, cy = y == null ? innerHeight * .45 : y;
+  for (let i = 0; i < 22; i++) {
+    const p = document.createElement('i');
+    const a = Math.random() * Math.PI * 2, d = 80 + Math.random() * 120;
+    p.style.cssText = `left:${cx}px;top:${cy}px;background:${colors[i % colors.length]};--dx:${Math.cos(a) * d}px;--dy:${Math.sin(a) * d + 140}px;--rot:${Math.random() * 540 - 270}deg;animation-delay:${Math.random() * 60}ms`;
+    box.appendChild(p);
+  }
+  document.body.appendChild(box);
+  setTimeout(() => box.remove(), 1300);
+};
+
+/* Angka naik perlahan (dipakai untuk untung di Beranda) */
+UI.countUp = (el, to, fmt) => {
+  if (!el) return;
+  if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) { el.textContent = fmt(to); return; }
+  const t0 = performance.now(), dur = 700;
+  const step = t => { const k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3); el.textContent = fmt(Math.round(to * e)); if (k < 1) requestAnimationFrame(step); };
+  requestAnimationFrame(step);
+};
+
+/* Tema & mode gelap, disimpan per HP */
+const Theme = {
+  THEMES: [['ungu', 'Ungu', '#6A45E0'], ['biru', 'Biru', '#2457D6'], ['merah', 'Merah', '#C42A3F'], ['oranye', 'Oranye', '#B14E0B'], ['hijau', 'Hijau', '#0E7A4D']],
+  get theme() { return localStorage.getItem('aj_theme') || 'ungu'; },
+  get mode() { return localStorage.getItem('aj_mode') || 'auto'; },
+  resolved() { return this.mode === 'auto' ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : this.mode; },
+  apply() {
+    const r = document.documentElement;
+    r.dataset.theme = this.theme; r.dataset.mode = this.resolved();
+    const m = document.querySelector('meta[name="theme-color"]');
+    if (m) m.content = this.resolved() === 'dark' ? '#0E1015' : '#F7F7F9';
+  },
+  set(k, v) { localStorage.setItem(k === 'theme' ? 'aj_theme' : 'aj_mode', v); this.apply(); }
+};
+if (window.matchMedia) matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => Theme.apply());
 
 window.addEventListener('popstate', () => {
   if (UI._ignorePop > 0) { UI._ignorePop--; return; }

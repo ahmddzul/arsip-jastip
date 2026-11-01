@@ -26,7 +26,7 @@ const App = {
     ['pelanggan', 'users', 'Pelanggan'],
     ['lainnya', 'grid', 'Lainnya']
   ],
-  NAV_PARENT: { kiriman: 'lainnya', supplier: 'lainnya', pengaturan: 'lainnya' },
+  NAV_PARENT: { kiriman: 'lainnya', supplier: 'lainnya', pengaturan: 'lainnya', faq: 'lainnya' },
 
   parse() {
     const h = location.hash.slice(1) || '/beranda';
@@ -45,16 +45,19 @@ const App = {
       nav.classList.add('hide');
       view.innerHTML = V.welcome();
       if (anim) this.animate(view);
+      UI.syncPressed(view);
       return;
     }
     nav.classList.remove('hide');
-    view.className = 'view';
+    view.className = anim ? 'view' : 'view static';
     const r = this.route;
     if (r.name === 'pesanan' && r.params.f) this.ui.pesanan.f = r.params.f;
     if (r.name === 'barang' && !r.id && r.params.st) this.ui.barang.st = r.params.st;
 
     let html;
-    if (this.loading && !Store.meta.lastPull && !Api.isDemo()) html = V.skeleton();
+    const noData = !Store.meta.lastPull && !Api.isDemo();
+    if (this.loading && noData) html = V.skeleton();
+    else if (noData && (Sync.state === 'error' || Sync.state === 'offline') && Sync.lastError && !Store.hasData() && r.name !== 'pengaturan') html = V.errorState();
     else switch (r.name) {
       case 'barang': html = r.id ? V.barangDetail(r.id) : V.barang(); break;
       case 'pesanan': html = V.pesanan(); break;
@@ -63,20 +66,26 @@ const App = {
       case 'kiriman': html = V.kiriman(); break;
       case 'supplier': html = V.supplier(); break;
       case 'pengaturan': html = V.pengaturan(); break;
+      case 'faq': html = V.faq(); break;
       default: html = V.beranda();
     }
     view.innerHTML = html;
     if (anim) this.animate(view);
     UI.moneyInputs(view);
+    UI.syncPressed(view);
     this.paintNav();
+    const big = view.querySelector('.big[data-count]');
+    if (big && anim) UI.countUp(big, +big.dataset.count, UI.rp);
+    this.onScroll();
   },
+  onScroll() { const h = document.querySelector('.vhead'); if (h) h.classList.toggle('scrolled', window.scrollY > 4); },
   animate(view) { view.classList.remove('enter'); void view.offsetWidth; view.classList.add('enter'); },
 
   paintNav() {
     const cur = this.NAV_PARENT[this.route.name] || this.route.name;
     const unpaid = Calc.bills().length;
     document.getElementById('bnav').innerHTML = this.NAV.map(([k, ic, l]) =>
-      `<a href="#/${k}" class="${cur === k ? 'on' : ''}" ${cur === k ? 'aria-current="page"' : ''}>${UI.icon(ic)}<span>${l}</span>${k === 'pesanan' && unpaid ? `<span class="badge">${unpaid}</span>` : ''}</a>`).join('');
+      `<a href="#/${k}" class="${cur === k ? 'on' : ''}" ${cur === k ? 'aria-current="page"' : ''} onclick="this.classList.add('tap')">${UI.icon(ic)}<span>${l}</span>${k === 'pesanan' && unpaid ? `<span class="badge">${unpaid}</span>` : ''}</a>`).join('');
   },
 
   /** Gambar ulang halaman tanpa animasi; posisi gulir & fokus input dipertahankan. */
@@ -158,19 +167,21 @@ const App = {
       }
     }
     Store.upsert('Barang', { ...it, status: closing ? 'tutup' : 'open' });
-    UI.toast(closing ? 'PO ditutup. Kerja bagus! 🙌' : 'PO dibuka lagi');
+    UI.toast(closing ? 'PO ditutup. Kerja bagus!' : 'PO dibuka lagi');
   },
-  copyPromo(id) { const it = Store.get('Barang', id); if (it) UI.copy(Text.promo(it), 'Teks promosi tersalin. Tempel di status atau grup ✨'); },
+  copyPromo(id) { const it = Store.get('Barang', id); if (it) UI.copy(Text.promo(it), 'Teks promosi tersalin. Tempel di status atau grup'); },
   copyList(id) {
     const it = Store.get('Barang', id); if (!it) return;
     if (!Calc.ordersOf(id).some(o => !Calc.isSelf(o))) return UI.toast('Belum ada yang list di barang ini');
-    UI.copy(Text.list(it), 'List tersalin. Tinggal tempel di grup 📝');
+    UI.copy(Text.list(it), 'List tersalin. Tinggal tempel di grup');
   },
   copyAddr(cid) { const c = Store.get('Pelanggan', cid); if (c && c.alamat) UI.copy(`${c.nama}\n${c.wa || ''}\n${c.alamat}`.replace(/\n\n/g, '\n'), 'Alamat tersalin'); },
   copyResi(kid) { const k = Store.get('Kiriman', kid); if (k && k.resi) UI.copy(k.resi, 'Resi tersalin'); },
   chat(cid) { const c = Store.get('Pelanggan', cid); if (c) UI.wa(c.wa, Text.sapa(c)); },
-  copySisa(id) { const it = Store.get('Barang', id); if (it) UI.copy(Text.sisa(it), 'Teks barang sisa tersalin. Tempel di status atau grup 📦'); },
-  pickChip(btn, groupId) { document.querySelectorAll('#' + groupId + ' .chip').forEach(c => c.classList.toggle('on', c === btn)); },
+  copySisa(id) { const it = Store.get('Barang', id); if (it) UI.copy(Text.sisa(it), 'Teks barang sisa tersalin. Tempel di status atau grup'); },
+  pickChip(btn, groupId) { document.querySelectorAll('#' + groupId + ' .chip').forEach(c => UI.on(c, c === btn)); },
+  setMode(m) { Theme.set('mode', m); this.refresh(); },
+  setTheme(t) { Theme.set('theme', t); this.refresh(); UI.toast('Tema ' + (Theme.THEMES.find(x => x[0] === t) || [0, t])[1] + ' dipakai di HP ini'); },
 
   /* ---------- Pengaturan ---------- */
   saveSettings() {
@@ -179,12 +190,12 @@ const App = {
     if (!nama) return UI.shake(document.getElementById('sNama'), 'Nama panggilannya diisi dulu ya');
     const next = { namaPanggilan: nama, namaToko: toko || 'Jastip ' + nama, markupDefault: UI.num(v('sMarkup')) || 0, infoBayar: v('sBayar').trim(), panggilanDefault: ((document.querySelector('#sPgl .chip.on') || {}).dataset || {}).p === '-' ? '' : ((document.querySelector('#sPgl .chip.on') || {}).dataset || {}).p || 'Kak' };
     Object.entries(next).forEach(([k, val]) => { if (Store.settings[k] !== val) Store.setSetting(k, val); });
-    UI.toast(`Siap, Kak ${nama}! Pengaturan disimpan ✅`);
+    UI.toast(`Siap, Kak ${nama}! Pengaturan disimpan`);
     this.refresh();
   },
   async cleanPhotos() {
     const old = Store.all('Barang').filter(b => b.status === 'tutup' && (b.fotoId || b.fotoUrl));
-    if (!old.length) return UI.toast('Nggak ada foto lama yang perlu dihapus 👍');
+    if (!old.length) return UI.toast('Nggak ada foto lama yang perlu dihapus');
     const ok = await UI.confirm({ title: 'Hapus foto lama?', text: `${old.length} foto dari PO yang sudah selesai akan dipindah ke sampah Google Drive. Data barangnya tetap ada.`, ok: 'Hapus foto', danger: true });
     if (!ok) return;
     const ids = old.map(b => b.fotoId).filter(Boolean);
@@ -193,7 +204,7 @@ const App = {
     }
     old.forEach(b => Store.upsert('Barang', { ...b, fotoId: '', fotoUrl: '' }, { quiet: true }));
     this.refresh();
-    UI.toast(`${old.length} foto dibersihkan 🧹`);
+    UI.toast(`${old.length} foto dibersihkan`);
   },
   async resetLocal() {
     const demo = Api.isDemo();
@@ -221,7 +232,7 @@ const App = {
     try {
       await Sync.pull();
       Store.ensureSelf();
-      if (loud) UI.toast('Data sudah paling baru ✨');
+      if (loud) UI.toast('Data sudah paling baru');
     } catch (e) {
       Sync.setState(['KUNCI_SALAH', 'BELUM_SETUP', 'RESPON_ANEH'].includes(e.message) ? 'error' : 'offline');
       Sync.lastError = Api.errText(e);
@@ -246,16 +257,15 @@ const App = {
       UI.toast(Api.errText(e), 'bad');
       return false;
     }
-    const nama = Store.settings.namaPanggilan;
+    const nama = Store.settings.namaPanggilan, toko = Store.settings.namaToko;
     const wasDemo = Api.isDemo();
     Api.setCfg(cfg.url, cfg.key);
     if (wasDemo || Store.meta.sheetUrl === '') { Sync.queue = []; Sync.persist(); Store.wipe(); }
     await this.pull(true);
-    // nama yang diisi di layar sambutan dikirim ke Sheet kalau Sheet masih pakai nama bawaan
-    if (nama && nama !== Store.settings.namaPanggilan && Store.settings.namaPanggilan === DEFAULT_SETTINGS.namaPanggilan) {
-      Store.setSetting('namaPanggilan', nama);
-    }
-    UI.toast(`Tersambung! Halo, Kak ${Store.settings.namaPanggilan} 💜`);
+    // nama dari layar sambutan dikirim ke Sheet kalau di Sheet masih kosong
+    if (nama && !Store.settings.namaPanggilan) Store.setSetting('namaPanggilan', nama);
+    if (toko && !Store.settings.namaToko) Store.setSetting('namaToko', toko);
+    UI.toast(`Tersambung! Halo, Kak ${Store.settings.namaPanggilan || nama}`);
     this.refresh();
     return true;
   },
@@ -265,6 +275,7 @@ const App = {
     const n = document.getElementById('wNama').value.trim();
     if (!n) return UI.shake(document.getElementById('wNama'), 'Isi nama panggilanmu dulu ya');
     Store.settings.namaPanggilan = n;
+    Store.settings.namaToko = document.getElementById('wToko').value.trim();
     Store.save();
     this.ui.welcomeStep = 2;
     this.render();
@@ -275,21 +286,24 @@ const App = {
   },
   startDemo() {
     localStorage.setItem('jt_demo', '1');
-    const nama = Store.settings.namaPanggilan;
+    const nama = Store.settings.namaPanggilan, toko = Store.settings.namaToko;
     Store.wipe();
     Demo.seed();
     Store.settings.namaPanggilan = nama;
+    Store.settings.namaToko = toko;
     Store.save();
     Sync.setState('demo');
     location.hash = '#/beranda';
     this.route = this.parse();
     this.render();
-    UI.toast(`Ini data contoh ya, Kak ${nama}. Coba pencet-pencet aja ✨`);
+    UI.toast(`Ini data contoh ya, Kak ${nama}. Coba pencet-pencet aja`);
   },
 
   /* ---------- Mulai ---------- */
   boot() {
+    Theme.apply();
     Store.load();
+    window.addEventListener('scroll', () => this.onScroll(), { passive: true });
     window.addEventListener('hashchange', () => {
       this._moved = true;
       this.route = this.parse();
