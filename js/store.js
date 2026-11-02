@@ -222,18 +222,41 @@ const Calc = {
       if (Calc.isSelf(o)) { self += Calc.modal(o); return; }
       omzet += Calc.total(o); untung += Calc.profit(o); pcs += +o.qty || 0;
     });
-    let ongkir = 0;
-    Store.all('Kiriman').forEach(k => {
+    let ongkir = 0, ongkirSup = 0;
+    Calc.keluar().forEach(k => {
       if (Calc.inPeriod(k.tanggal || k.dibuat, p)) ongkir += (+k.ongkirTagih || 0) - (+k.ongkirBiaya || 0);
     });
-    return { omzet, untung: untung + ongkir, untungBarang: untung, ongkir, pcs, self };
+    Calc.masuk().forEach(k => { if (Calc.inPeriod(k.tanggal || k.dibuat, p)) ongkirSup += +k.ongkirBiaya || 0; });
+    return { omzet, untung: untung + ongkir - ongkirSup, untungBarang: untung, ongkir, ongkirSup, pcs, self };
   },
+
+  /* Kiriman ke pelanggan (keluar) dan ongkir dari supplier ke kamu (masuk) disimpan di tabel yang sama. */
+  isMasuk: k => k.arah === 'masuk',
+  keluar: () => Store.all('Kiriman').filter(k => !Calc.isMasuk(k)),
+  masuk: () => Store.all('Kiriman').filter(Calc.isMasuk),
+  barangIdsOf: k => String(k.barangIds || '').split(',').map(x => x.trim()).filter(Boolean),
+  /* Bobot pembagian ongkir: jumlah pcs yang datang (stok), kalau belum diisi pakai pcs Dapat. */
+  pcsDatang(barangId) {
+    const stok = Calc.variantsOf(barangId).reduce((a, v) => a + (+v.stokDapat || 0), 0);
+    if (stok) return stok;
+    return Calc.ordersOf(barangId).filter(o => o.status === 'dapat').reduce((a, o) => a + (+o.qty || 0), 0);
+  },
+  /* Bagian ongkir satu kiriman supplier untuk satu barang. Dibagi sesuai pcs; kalau pcs belum ada, dibagi rata. */
+  bagianOngkir(k, barangId) {
+    const ids = Calc.barangIdsOf(k).filter(id => Store.get('Barang', id));
+    if (!ids.includes(barangId)) return 0;
+    const w = ids.map(Calc.pcsDatang), tot = w.reduce((a, x) => a + x, 0);
+    const biaya = +k.ongkirBiaya || 0;
+    return Math.round(tot ? biaya * w[ids.indexOf(barangId)] / tot : biaya / ids.length);
+  },
+  ongkirBarang: (barangId, p = 'semua') => Calc.masuk().filter(k => Calc.inPeriod(k.tanggal || k.dibuat, p)).reduce((a, k) => a + Calc.bagianOngkir(k, barangId), 0),
+  ongkirSupplier: sid => Calc.masuk().filter(k => k.supplierId === sid),
 
   bills() {
     const m = {};
     const add = id => m[id] || (m[id] = { pelangganId: id, orders: [], kiriman: [], total: 0 });
     Store.all('Pesanan').forEach(o => { if (Calc.isUnpaid(o)) { const b = add(o.pelangganId); b.orders.push(o); b.total += Calc.total(o); } });
-    Store.all('Kiriman').forEach(k => {
+    Calc.keluar().forEach(k => {
       if ((+k.ongkirTagih || 0) > 0 && !k.ongkirLunas && k.pelangganId !== SELF_ID) { const b = add(k.pelangganId); b.kiriman.push(k); b.total += +k.ongkirTagih; }
     });
     return Object.values(m).sort((a, b) => b.total - a.total);
@@ -255,7 +278,8 @@ const Calc = {
       const i = idx[key(Calc.soldDate(o))]; if (i !== undefined) out[i].v += Calc.profit(o);
     });
     Store.all('Kiriman').forEach(k => {
-      const i = idx[key(k.tanggal || k.dibuat)]; if (i !== undefined) out[i].v += (+k.ongkirTagih || 0) - (+k.ongkirBiaya || 0);
+      const i = idx[key(k.tanggal || k.dibuat)]; if (i === undefined) return;
+      out[i].v += Calc.isMasuk(k) ? -(+k.ongkirBiaya || 0) : (+k.ongkirTagih || 0) - (+k.ongkirBiaya || 0);
     });
     return out;
   },
@@ -267,6 +291,7 @@ const Calc = {
       const x = m[o.barangId] || (m[o.barangId] = { id: o.barangId, untung: 0, pcs: 0 });
       x.untung += Calc.profit(o); x.pcs += +o.qty || 0;
     });
+    Object.values(m).forEach(x => { x.untung -= Calc.ongkirBarang(x.id, p); });
     return Object.values(m).filter(x => Store.get('Barang', x.id)).sort((a, b) => b.untung - a.untung).slice(0, n);
   },
   topCustomers(p, n = 5) {

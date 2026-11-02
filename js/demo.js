@@ -75,6 +75,7 @@ const Demo = {
     put('Kiriman', { id: 'k0', pelangganId: 'c1', tanggal: ago(36), kurir: 'JNE', resi: 'JNE0012345678', alamat: 'Jl. Melati No. 12, Cikarang Utara', ongkirTagih: 12000, ongkirBiaya: 10000, ongkirLunas: true, status: 'diterima', catatan: '', dibuat: ago(36) });
     put('Kiriman', { id: 'k2', pelangganId: 'c6', tanggal: ago(36), kurir: 'GoSend', resi: '', alamat: 'Apartemen Meikarta Tower 2', ongkirTagih: 18000, ongkirBiaya: 18000, ongkirLunas: true, status: 'diterima', catatan: '', dibuat: ago(36) });
     put('Kiriman', { id: 'k3', pelangganId: 'c5', tanggal: ago(35), kurir: 'Ambil sendiri', resi: '', alamat: '', ongkirTagih: 0, ongkirBiaya: 0, ongkirLunas: true, status: 'diterima', catatan: '', dibuat: ago(35) });
+    put('Kiriman', { id: 'km1', arah: 'masuk', supplierId: 's1', barangIds: 'b1', pelangganId: '', tanggal: ago(10), kurir: 'JNE', resi: '', alamat: '', ongkirTagih: 0, ongkirBiaya: 24000, ongkirLunas: true, status: 'diterima', catatan: 'Tumbler datang', dibuat: ago(10) });
     put('Kiriman', { id: 'k1', pelangganId: 'c1', tanggal: ago(3), kurir: 'J&T', resi: 'JX4402918377', alamat: 'Jl. Melati No. 12, Cikarang Utara', ongkirTagih: 15000, ongkirBiaya: 12000, ongkirLunas: false, status: 'dikirim', catatan: '', dibuat: ago(3) });
 
     Store.save();

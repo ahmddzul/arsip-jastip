@@ -85,7 +85,7 @@ V.beranda = () => {
   const refund = os.filter(Calc.isRefund);
   const open = Store.all('Barang').filter(b => b.status !== 'tutup');
   const waiting = os.filter(Calc.isWaiting);
-  const packing = Store.all('Kiriman').filter(k => k.status === 'dikemas');
+  const packing = Calc.keluar().filter(k => k.status === 'dikemas');
   const g = Text.greet();
   const nama = E(Store.settings.namaPanggilan || '');
   const err = Sync.state === 'error' || (Sync.state === 'offline' && Sync.lastError);
@@ -133,6 +133,7 @@ V.beranda = () => {
         <span>Omzet <b>${UI.rp(s.omzet)}</b></span>
         <span><b>${s.pcs}</b> pcs terjual</span>
         ${s.ongkir ? `<span>Selisih ongkir <b>${UI.rp(s.ongkir)}</b></span>` : ''}
+        ${s.ongkirSup ? `<span>Ongkir supplier <b>−${UI.rp(s.ongkirSup)}</b></span>` : ''}
       </div>
     </div>
   </section>
@@ -252,7 +253,7 @@ V.barangDetail = id => {
   const pcs = all.reduce((a, o) => a + (+o.qty || 0), 0);
   const dapat = all.filter(o => o.status === 'dapat');
   const dapatPcs = dapat.reduce((a, o) => a + (+o.qty || 0), 0);
-  const est = (dapat.length ? dapat : all).filter(o => !Calc.isSelf(o)).reduce((a, o) => a + Calc.profit(o), 0);
+  const est = (dapat.length ? dapat : all).filter(o => !Calc.isSelf(o)).reduce((a, o) => a + Calc.profit(o), 0) - Calc.ongkirBarang(id);
   const closed = it.status === 'tutup';
   const hasStok = vs.some(v => +v.stokDapat);
 
@@ -409,7 +410,7 @@ V.pelangganDetail = id => {
   const s = Calc.custStats(id), b = Calc.billOf(id);
   const os = Calc.ordersOfCust(id);
   const ready = os.filter(Calc.isReady);
-  const ks = Store.all('Kiriman').filter(k => k.pelangganId === id).sort((a, b2) => String(b2.tanggal).localeCompare(String(a.tanggal)));
+  const ks = Calc.keluar().filter(k => k.pelangganId === id).sort((a, b2) => String(b2.tanggal).localeCompare(String(a.tanggal)));
   const self = !!c.isSelf;
 
   return V.head(self ? 'Buat aku sendiri' : 'Pelanggan', { back: '#/pelanggan', right: `<button class="icon-btn" type="button" onclick="Sheets.pelanggan('${id}')" aria-label="Ubah data pelanggan">${I('edit')}</button>` })
@@ -450,7 +451,7 @@ V.kirimanRow = (k, showName = true, i = 0) => {
 };
 
 V.kiriman = () => {
-  const ks = Store.all('Kiriman');
+  const ks = Calc.keluar();
   const f = App.ui.kiriman.f;
   let list = ks.slice().sort((a, b) => String(b.tanggal || b.dibuat).localeCompare(String(a.tanggal || a.dibuat)));
   if (f !== 'semua') list = list.filter(k => k.status === f);
@@ -470,8 +471,9 @@ V.supplier = () => {
   return V.head('Supplier', { back: '#/lainnya', sub: `${ss.length} supplier` })
     + `<div class="list stagger">${ss.length ? ss.map((s, i) => {
       const r = Calc.supplierRate(s.id), n = Store.all('Barang').filter(b => b.supplierId === s.id).length;
+      const ong = Calc.ongkirSupplier(s.id).reduce((a, k) => a + (+k.ongkirBiaya || 0), 0);
       return `<button class="prow" type="button" style="text-align:left;width:100%;--i:${Math.min(i, 8)}" onclick="Sheets.supplier('${s.id}')"><span class="ava">${I('store')}</span>
-        <div class="prow-m"><b>${E(s.nama)}</b><small>${n} barang${r.rate != null ? ` · peluang dapat ${r.rate}%` : ''}</small>${r.rate != null ? `<div class="bar"><i style="width:${r.rate}%"></i></div>` : ''}</div>${I('chev', 'chev')}</button>`;
+        <div class="prow-m"><b>${E(s.nama)}</b><small>${n} barang${r.rate != null ? ` · peluang dapat ${r.rate}%` : ''}${ong ? ` · ongkir ${UI.rpShort(ong)}` : ''}</small>${r.rate != null ? `<div class="bar"><i style="width:${r.rate}%"></i></div>` : ''}</div>${I('chev', 'chev')}</button>`;
     }).join('') : V.empty('store', 'Belum ada supplier', 'Catat supplier biar kelihatan mana yang paling sering dapat barang.', `<button class="btn primary" type="button" onclick="Sheets.supplier()">${I('plus')} Tambah supplier</button>`)}</div>`
     + (ss.length ? V.fab('Supplier', 'Sheets.supplier()') : '');
 };
@@ -504,7 +506,7 @@ V.kopiNudge = () => {
 };
 
 V.lainnya = () => {
-  const ks = Store.all('Kiriman').filter(k => k.status !== 'diterima').length;
+  const ks = Calc.keluar().filter(k => k.status !== 'diterima').length;
   return V.head('Lainnya')
     + `<div class="tiles stagger">
       <a class="tile" style="--i:0" href="#/kiriman"><span class="stat-ic tone-info">${I('truck')}</span><b>Kiriman</b><small>${ks ? ks + ' paket belum diterima' : 'Resi & ongkir per paket'}</small></a>
@@ -515,7 +517,7 @@ V.lainnya = () => {
     ${Store.meta.sheetUrl ? `<section class="card"><a class="menu-row" href="${E(Store.meta.sheetUrl)}" target="_blank" rel="noopener"><span class="todo-ic tone-ok">${I('table')}</span><div><b>Buka Google Sheet</b><small>Lihat dan backup data mentah</small></div>${I('chev', 'chev')}</a></section>` : ''}
     ${V.kopi()}
     <div style="text-align:center;margin-top:22px">${LOGO('welcome-mini')}</div>
-    <p class="hint" style="text-align:center;margin:6px 0 0">Arsip Jastip · versi 2.2</p>
+    <p class="hint" style="text-align:center;margin:6px 0 0">Arsip Jastip · versi 2.3</p>
     ${V.credit()}`;
 };
 

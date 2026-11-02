@@ -606,11 +606,84 @@ const Sheets = {
     });
   },
 
+  /* ---------------- Ongkir dari supplier ke kamu ---------------- */
+  ongkirSup({ id, supplierId, barangId } = {}) {
+    const k = id ? Store.get('Kiriman', id) : null;
+    let sid = k ? (k.supplierId || '') : (supplierId ?? (barangId && Store.get('Barang', barangId) ? Store.get('Barang', barangId).supplierId || '' : ''));
+    let kurir = k ? k.kurir : '';
+    const pilih = new Set(k ? Calc.barangIdsOf(k) : barangId ? [barangId] : []);
+    const sups = Store.all('Supplier').slice().sort((a, b) => String(a.nama).localeCompare(String(b.nama)));
+    const barangChips = () => {
+      const list = Store.all('Barang').filter(b => !sid || b.supplierId === sid || pilih.has(b.id))
+        .sort((a, b) => String(b.tanggal || b.dibuat).localeCompare(String(a.tanggal || a.dibuat))).slice(0, 15);
+      return list.length ? list.map(b => `<button type="button" class="chip xs ${pilih.has(b.id) ? 'on' : ''}" aria-pressed="${pilih.has(b.id)}" data-b="${b.id}">${E(b.nama)}</button>`).join('')
+        : '<p class="hint" style="margin:0">Belum ada barang dari supplier ini.</p>';
+    };
+    UI.sheet({
+      title: k ? 'Ongkir dari supplier' : 'Catat ongkir dari supplier',
+      html: `<div class="form">
+        <p class="hint" style="margin:0">Ongkir yang kamu bayar saat barang dikirim supplier ke kamu. Nominal ini mengurangi untung bersih.</p>
+        <label class="field"><span>Ongkir yang kamu bayar</span><input id="osBiaya" data-money inputmode="numeric" value="${k && k.ongkirBiaya ? UI.dots(k.ongkirBiaya) : ''}" placeholder="0"></label>
+        ${sups.length ? `<div class="field" role="group" aria-labelledby="flOs1"><span id="flOs1">Supplier</span><div class="chips wrap" id="osSup">${sups.map(x => `<button type="button" class="chip xs ${sid === x.id ? 'on' : ''}" aria-pressed="${sid === x.id}" data-s="${x.id}">${E(x.nama)}</button>`).join('')}</div></div>` : ''}
+        <div class="field" role="group" aria-labelledby="flOs2"><span id="flOs2">Barang di kiriman ini <em>(opsional)</em></span>
+          <div class="chips wrap" id="osBrg">${barangChips()}</div>
+          <small class="hint" id="osHint" style="margin:6px 0 0"></small></div>
+        <div class="field" role="group" aria-labelledby="flOs3"><span id="flOs3">Kurir <em>(opsional)</em></span><div class="chips wrap" id="osKur">${KURIR.filter(x => x !== 'Ambil sendiri').map(x => `<button type="button" class="chip xs ${kurir === x ? 'on' : ''}" aria-pressed="${kurir === x}" data-k="${E(x)}">${E(x)}</button>`).join('')}</div></div>
+        <div class="row2">
+          <label class="field"><span>Tanggal</span><input id="osTgl" type="date" value="${UI.ymd(k ? k.tanggal : null)}"></label>
+          <label class="field"><span>Resi <em>(opsional)</em></span><input id="osResi" value="${E(k ? k.resi : '')}" autocomplete="off" autocapitalize="characters"></label>
+        </div>
+        <label class="field"><span>Catatan <em>(opsional)</em></span><input id="osCt" value="${E(k ? k.catatan : '')}" placeholder="Contoh: kiriman batch 2" autocomplete="off"></label>
+        <button class="btn primary block" id="osSave" type="button">${k ? 'Simpan perubahan' : 'Simpan ongkir'}</button>
+        ${k ? `<button class="btn danger-ghost block" id="osDel" type="button">${I('trash')} Hapus catatan ongkir</button>` : ''}
+      </div>`,
+      onMount(api) {
+        const hint = () => {
+          const n = pilih.size;
+          api.$('#osHint').textContent = n === 0 ? 'Tidak memilih barang: ongkir hanya mengurangi untung total.'
+            : n === 1 ? 'Ongkir dibebankan ke barang ini.' : `Ongkir dibagi ke ${n} barang sesuai jumlah pcs yang datang.`;
+        };
+        hint();
+        if (api.$('#osSup')) api.$('#osSup').addEventListener('click', e => {
+          const b = e.target.closest('[data-s]'); if (!b) return;
+          sid = sid === b.dataset.s ? '' : b.dataset.s;
+          api.$$('#osSup .chip').forEach(x => UI.on(x, x.dataset.s === sid));
+          api.$('#osBrg').innerHTML = barangChips();
+        });
+        api.$('#osBrg').addEventListener('click', e => {
+          const b = e.target.closest('[data-b]'); if (!b) return;
+          pilih.has(b.dataset.b) ? pilih.delete(b.dataset.b) : pilih.add(b.dataset.b);
+          UI.on(b, pilih.has(b.dataset.b)); hint();
+        });
+        api.$('#osKur').addEventListener('click', e => { const b = e.target.closest('[data-k]'); if (!b) return; kurir = kurir === b.dataset.k ? '' : b.dataset.k; api.$$('#osKur .chip').forEach(x => UI.on(x, x.dataset.k === kurir)); });
+        api.$('#osSave').onclick = async () => {
+          const biaya = UI.num(api.$('#osBiaya').value);
+          if (!biaya) return UI.shake(api.$('#osBiaya'), 'Isi nominal ongkirnya dulu ya');
+          const tgl = api.$('#osTgl').value ? new Date(api.$('#osTgl').value + 'T12:00:00').toISOString() : UI.now();
+          Store.upsert('Kiriman', {
+            ...(k || {}), id: k ? k.id : UI.uid('k'), arah: 'masuk', supplierId: sid, barangIds: [...pilih].join(','),
+            pelangganId: '', tanggal: tgl, kurir, resi: api.$('#osResi').value.trim(), catatan: api.$('#osCt').value.trim(),
+            ongkirBiaya: biaya, ongkirTagih: 0, ongkirLunas: true, status: 'diterima'
+          }, { quiet: true });
+          await api.close(); App.refresh(); UI.toast(k ? 'Ongkir diperbarui' : `Ongkir ${UI.rp(biaya)} dicatat. Untung sudah dikurangi`);
+        };
+        if (k) api.$('#osDel').onclick = async () => {
+          const ok = await UI.confirm({ title: 'Hapus catatan ongkir?', text: 'Untung kembali dihitung tanpa ongkir ini.', ok: 'Hapus', danger: true });
+          if (!ok) return;
+          Store.remove('Kiriman', k.id, { quiet: true });
+          await api.close(); App.refresh(); UI.toast('Catatan ongkir dihapus');
+        };
+      }
+    });
+  },
+
   /* ---------------- Supplier ---------------- */
   supplier(id) {
     const s = id ? Store.get('Supplier', id) : null;
     const r = s ? Calc.supplierRate(id) : null;
     const items = s ? Store.all('Barang').filter(b => b.supplierId === id) : [];
+    const ongs = s ? Calc.ongkirSupplier(id).sort((a, b) => String(b.tanggal).localeCompare(String(a.tanggal))) : [];
+    const ongTot = ongs.reduce((a, k) => a + (+k.ongkirBiaya || 0), 0);
     UI.sheet({
       title: s ? s.nama : 'Supplier baru',
       html: `<div class="form">
@@ -618,9 +691,13 @@ const Sheets = {
         <label class="field"><span>Nama supplier</span><input id="sNm" value="${E(s ? s.nama : '')}" placeholder="Contoh: Grosir Bu Ani" autocomplete="off"></label>
         <label class="field"><span>Kontak <em>(opsional)</em></span><input id="sKt" type="tel" inputmode="tel" value="${E(s ? s.kontak : '')}" placeholder="Nomor WA / telepon" autocomplete="off"></label>
         <label class="field"><span>Catatan <em>(opsional)</em></span><textarea id="sCt" rows="2" placeholder="Jadwal update stok, minimal order…">${E(s ? s.catatan : '')}</textarea></label>
+        ${s ? `<div class="field" role="group" aria-labelledby="flSo"><span id="flSo">Ongkir dari supplier</span>
+          ${ongs.length ? `<section class="card" style="margin:0;padding:4px 14px">${ongs.map(k => `<button type="button" class="mini-row" style="width:100%;text-align:left" onclick="UI.closeAll().then(()=>Sheets.ongkirSup({id:'${k.id}'}))"><span><b>${UI.rp(k.ongkirBiaya)}</b><small class="muted" style="display:block">${UI.rel(k.tanggal || k.dibuat)}${Calc.barangIdsOf(k).length ? ' · ' + Calc.barangIdsOf(k).map(b => Store.get('Barang', b)).filter(Boolean).map(b => E(b.nama)).join(', ') : ' · untung total'}</small></span>${I('chev', 'chev')}</button>`).join('')}
+            <div class="total-box" style="margin:8px 0 10px"><span>Total ongkir</span><b>${UI.rp(ongTot)}</b></div></section>` : ''}
+          <button class="btn ghost block" type="button" onclick="UI.closeAll().then(()=>Sheets.ongkirSup({supplierId:'${s.id}'}))">${I('plus')} Catat ongkir dari supplier</button></div>` : ''}
         <button class="btn primary block" id="sSave" type="button">${s ? 'Simpan perubahan' : 'Simpan supplier'}</button>
         ${s && s.kontak ? `<button class="btn wa block" type="button" onclick="UI.wa('${E(UI.waNum(s.kontak))}','')">${I('chat')} Chat supplier</button>` : ''}
-        ${s && !items.length ? `<button class="btn danger-ghost block" id="sDel" type="button">${I('trash')} Hapus supplier</button>` : ''}
+        ${s && !items.length && !ongs.length ? `<button class="btn danger-ghost block" id="sDel" type="button">${I('trash')} Hapus supplier</button>` : ''}
       </div>`,
       onMount(api) {
         api.$('#sSave').onclick = async () => {
@@ -703,16 +780,22 @@ const Sheets = {
     const all = Calc.ordersOf(itemId).filter(o => o.status !== 'batal');
     const dapat = all.filter(o => o.status === 'dapat'), base = dapat.length ? dapat : all;
     const rows = base.filter(o => !Calc.isSelf(o)), self = base.filter(Calc.isSelf);
-    const tot = rows.reduce((a, o) => a + Calc.profit(o), 0);
+    const kotor = rows.reduce((a, o) => a + Calc.profit(o), 0);
+    const ongs = Calc.masuk().filter(k => Calc.bagianOngkir(k, itemId) > 0);
+    const ong = ongs.reduce((a, k) => a + Calc.bagianOngkir(k, itemId), 0);
+    const tot = kotor - ong;
     UI.sheet({
       title: dapat.length ? 'Rincian untung' : 'Perkiraan untung',
-      html: `<p class="hint">${dapat.length ? 'Dari pesanan yang sudah dapat.' : 'Belum ada yang dapat, jadi dihitung dari semua yang list.'} Untung = (harga jual − modal) × jumlah − diskon.</p>
+      html: `<p class="hint">${dapat.length ? 'Dari pesanan yang sudah dapat.' : 'Belum ada yang dapat, jadi dihitung dari semua yang list.'} Untung = (harga jual − modal) × jumlah − diskon${ong ? ' − ongkir dari supplier' : ''}.</p>
         <section class="card" style="margin-top:6px">${rows.length ? rows.map(o => {
           const c = Calc.cust(o), hemat = (+o.diskon || 0) + Calc.autoDisc(o);
           return `<div class="mini-row" style="display:block" onclick="Sheets.order('${o.id}')"><div style="display:flex;justify-content:space-between;gap:10px"><span><b>${E(c ? c.nama : '-')}</b> · ${o.qty} pcs</span><b>${UI.rp(Calc.profit(o))}</b></div>
             <small class="muted">(${UI.rp(o.hargaJual)} − modal ${UI.rp(o.hargaModal)}) × ${o.qty}${hemat ? ` − diskon ${UI.rp(hemat)}` : ''}</small></div>`;
         }).join('') : '<p class="muted">Belum ada pesanan.</p>'}
+        ${ongs.map(k => { const bag = Calc.bagianOngkir(k, itemId), n = Calc.barangIdsOf(k).length; return `<button type="button" class="mini-row" style="display:block;width:100%;text-align:left" onclick="UI.closeAll().then(()=>Sheets.ongkirSup({id:'${k.id}'}))"><div style="display:flex;justify-content:space-between;gap:10px"><span><b>Ongkir dari supplier</b> · ${UI.rel(k.tanggal || k.dibuat).toLowerCase()}</span><b>−${UI.rp(bag)}</b></div>
+          <small class="muted">${n > 1 ? `Bagian barang ini dari ${UI.rp(k.ongkirBiaya)}, dibagi ke ${n} barang sesuai pcs` : 'Dibebankan penuh ke barang ini'}</small></button>`; }).join('')}
         <div class="total-box" style="margin-top:12px"><span>Total untung</span><b>${UI.rp(tot)}</b></div></section>
+        <button class="btn ghost block" type="button" style="margin-top:10px" onclick="UI.closeAll().then(()=>Sheets.ongkirSup({barangId:'${itemId}'}))">${I('truck')} Catat ongkir dari supplier</button>
         ${self.length ? `<p class="hint" style="margin-top:10px">${self.reduce((a, o) => a + (+o.qty || 0), 0)} pcs buat kamu sendiri tidak dihitung sebagai untung.</p>` : ''}`
     });
   },

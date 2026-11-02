@@ -114,3 +114,10 @@ C-1 sampai C-5, R-05, R-11, R-15, R-16, R-20, R-21, R-29, R-30, R-31: PASS. Pale
 - Tombol: tinggi 44 px. Nanti saja lewat keyboard: kartu hilang, fokus pindah ke kontrol berikutnya, tetap hilang setelah halaman dimuat ulang.
 - Lebar 320, 390, 768, 1024 px: tidak ada scroll ke samping. Di 320 px tombol turun ke baris kedua dengan rapi.
 - Delivery Gate v2.2: PASS.
+
+## Tambahan v2.3: ongkir dari supplier
+
+- Dicatat di tabel Kiriman dengan `arah: masuk`, `supplierId`, `barangIds`. Server lama otomatis menambah kolomnya, jadi `Code.gs` tidak perlu diganti (diuji dengan server tiruan).
+- Untung bersih (Beranda, grafik, barang paling cuan) dikurangi ongkir ini. Kalau barang dipilih, ongkir dibagi sesuai pcs yang datang (stok, atau pcs Dapat kalau stok kosong); kalau tidak dipilih, hanya mengurangi untung total.
+- Pintu masuk: sheet Supplier dan Rincian untung di halaman barang. Kiriman ke pelanggan, tagihan, dan riwayat pelanggan tidak ikut menampilkan catatan ini.
+- Kontras 6 tema × 2 mode di Beranda, Supplier, Detail barang, dan form ongkir: PASS. Lebar 320 dan 768 px: tidak ada scroll ke samping. Tidak ada error konsol.

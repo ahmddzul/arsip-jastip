@@ -30,10 +30,10 @@ Dibuat oleh [@ahmddzul](https://instagram.com/ahmddzul) untuk dipakai pribadi. K
 | Menu | Yang bisa dilakukan |
 |---|---|
 | Beranda | Untung bersih per periode, tagihan yang belum dibayar, paket siap kirim, daftar hal yang perlu diurus, grafik untung, barang paling cuan, pelanggan setia, peluang dapat per supplier |
-| Barang | Catat PO dengan varian dan harga berbeda, diskon beli banyak, foto opsional, teks promosi otomatis, salin list untuk grup, bagi jatah sesuai urutan list, stok dan barang sisa, rincian untung |
+| Barang | Catat PO dengan varian dan harga berbeda, diskon beli banyak, foto opsional, teks promosi otomatis, salin list untuk grup, bagi jatah sesuai urutan list, stok dan barang sisa, rincian untung (termasuk bagian ongkir dari supplier) |
 | Pesanan | Filter Nunggu kabar, Belum bayar, Siap kirim, Dikirim, Perlu refund, Buat aku, Batal. Tagih via WhatsApp dan tandai lunas sekali ketuk |
 | Pelanggan | Riwayat belanja, sapaan (Kak, Mas, Mbak, Bu, Pak), nomor WA, alamat, tagihan, resi |
-| Lainnya | Kiriman, supplier, FAQ, pengaturan, template pesan WA yang bisa diubah, mode gelap, 6 warna tema |
+| Lainnya | Kiriman, supplier dengan catatan ongkir dari supplier (mengurangi untung), FAQ, pengaturan, template pesan WA yang bisa diubah, mode gelap, 6 warna tema |
 
 Aplikasi tetap bisa dipakai saat sinyal hilang. Perubahan disimpan di HP dulu, lalu dikirim ke Google Sheet begitu online.
 
