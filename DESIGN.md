@@ -25,19 +25,21 @@ Isi file ini disusun dari jawaban pemilik (@ahmddzul). Agen hanya merapikan form
 
 ## Warna
 
-- Enam tema dengan satu warna aksen solid per tema: Ungu (bawaan), Biru, Merah, Oranye, Hijau, Pink.
-- Gradien hanya dipakai di kartu ringkasan Beranda, dari warna aksen tua ke warna aksen. Alasannya: kartu itu satu-satunya titik fokus di Beranda.
-- Mode terang dan gelap. Bawaannya mengikuti pengaturan HP, dan bisa dipilih manual.
+- Enam tema pastel: Lavender (bawaan), Baby Blue, Koral, Peach, Mint, Baby Pink. Kunci tema di kode tetap `ungu`, `biru`, `merah`, `oranye`, `hijau`, `pink` supaya pilihan lama di HP tidak hilang.
+- Warna pastel terlalu terang untuk tulisan putih (kontras sekitar 1,5:1). Karena itu tulisan di atas warna tema (kartu untung, tombol utama, chip terpilih, tombol tambah) memakai warna tua senada (`--on-acc`). Tulisan dan ikon berwarna di latar putih memakai versi tua (`--acc-ink`).
+- Gradien hanya dipakai di kartu ringkasan Beranda, dari pastel tua ke pastel. Alasannya: kartu itu satu-satunya titik fokus di Beranda.
+- Mode terang dan gelap. Bawaannya mengikuti pengaturan HP, dan bisa dipilih manual. Di mode gelap, isian pastel tetap sama dan tulisan berwarna memakai pastel terang.
 - Status memakai warna tetap di semua tema: hijau (dapat/lunas), kuning tua (belum bayar), merah (perlu refund).
+- Ikon aplikasi tetap ungu tua seperti sebelumnya.
 
-| Tema | Aksen | Aksen tua | Tinta di mode gelap | Putih di aksen |
-|---|---|---|---|---|
-| Ungu | #6A45E0 | #4E2FC2 | #B9A6FF | 5,93:1 |
-| Biru | #2457D6 | #1A40A8 | #93B4FF | 6,16:1 |
-| Merah | #C42A3F | #9C1E31 | #FF98A5 | 5,60:1 |
-| Oranye | #B14E0B | #8C3B06 | #FFAE6E | 5,30:1 |
-| Hijau | #0E7A4D | #0A5C3A | #6ED9A4 | 5,37:1 |
-| Pink | #C2185B | #93124A | #FF9CC6 | 5,87:1 |
+| Tema | Isian | Pastel tua | Tulisan di atas isian | Tinta di latar putih | Tinta mode gelap | Kontras tulisan/isian |
+|---|---|---|---|---|---|---|
+| Lavender | #CBBBF6 | #B39FEF | #251456 | #5B3FC4 | #CDBEF7 | 9,1:1 |
+| Baby Blue | #A9CCF5 | #88B7EE | #0D2850 | #2456AE | #ADCEF6 | 8,8:1 |
+| Koral | #F5B0A9 | #EE928A | #4E1510 | #B0352A | #F6B5AF | 8,1:1 |
+| Peach | #FAC8A0 | #F5B07C | #4D260A | #9E470C | #FACCA6 | 8,7:1 |
+| Mint | #A6DDC1 | #86CFAB | #0B3523 | #0E774B | #A9DFC3 | 8,9:1 |
+| Baby Pink | #F5B3CB | #EC93B4 | #4A1029 | #AD2A5E | #F7B9D0 | 8,7:1 |
 
 ## Huruf
 

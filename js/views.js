@@ -533,7 +533,7 @@ V.lainnya = () => {
     ${Store.meta.sheetUrl ? `<section class="card"><a class="menu-row" href="${E(Store.meta.sheetUrl)}" target="_blank" rel="noopener"><span class="todo-ic tone-ok">${I('table')}</span><div><b>Buka Google Sheet</b><small>Lihat dan backup data mentah</small></div>${I('chev', 'chev')}</a></section>` : ''}
     ${V.kopi()}
     <div style="text-align:center;margin-top:22px">${LOGO('welcome-mini')}</div>
-    <p class="hint" style="text-align:center;margin:6px 0 0">Arsip Jastip · versi 2.4</p>
+    <p class="hint" style="text-align:center;margin:6px 0 0">Arsip Jastip · versi 2.5</p>
     ${V.credit()}`;
 };
 

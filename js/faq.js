@@ -42,7 +42,7 @@ V.faq = () => {
     ${q('Kiriman & supplier', 'Kiriman menyimpan kurir, resi, ongkir yang ditagih, dan ongkir yang kamu bayar ke kurir. Supplier menyimpan kontak, persentase seberapa sering barang didapat, dan ongkir yang kamu bayar saat supplier mengirim barang ke kamu.')}
     ${q('Ongkir dari supplier', 'Kalau kamu yang menanggung ongkir dari supplier ke kamu, catat di Lainnya, Supplier, pilih suppliernya, lalu Catat ongkir dari supplier. Bisa juga dari halaman barang: ketuk angka untung, lalu Catat ongkir dari supplier. Pilih barang yang ada di kiriman itu supaya ongkirnya dibagi sesuai jumlah pcs yang datang. Kalau tidak memilih barang, ongkirnya hanya mengurangi untung total. Untung di Beranda selalu sudah dikurangi ongkir ini.')}
     ${q('Template pesan', 'Teks promosi, promosi barang sisa, tagihan, sapaan chat, dan kabar kiriman bisa kamu ubah sendiri di Pengaturan. Kata kunci seperti {sapaan} dan {total} otomatis diganti isi aslinya.')}
-    ${q('Tampilan', 'Mode terang, gelap, atau ikuti HP. Enam warna tema: Ungu, Biru, Merah, Oranye, Hijau, dan Pink. Kalimat penyemangat saat aplikasi dibuka bisa ditampilkan atau disembunyikan. Pilihan ini tersimpan di masing-masing HP.')}
+    ${q('Tampilan', 'Mode terang, gelap, atau ikuti HP. Enam warna tema pastel: Lavender, Baby Blue, Koral, Peach, Mint, dan Baby Pink. Kalimat penyemangat saat aplikasi dibuka bisa ditampilkan atau disembunyikan. Pilihan ini tersimpan di masing-masing HP.')}
   </section>
 
   <h3 class="sec-label">Pertanyaan yang sering muncul</h3>

@@ -33,7 +33,7 @@ Dibuat oleh [@ahmddzul](https://instagram.com/ahmddzul) untuk dipakai pribadi. K
 | Barang | Catat PO dengan varian dan harga berbeda, diskon beli banyak, foto opsional, teks promosi otomatis, salin list untuk grup, bagi jatah sesuai urutan list, stok dan barang sisa, rincian untung (termasuk bagian ongkir dari supplier) |
 | Pesanan | Filter Nunggu kabar, Belum bayar, Siap kirim, Dikirim, Perlu refund, Buat aku, Batal. Tagih via WhatsApp dan tandai lunas sekali ketuk |
 | Pelanggan | Riwayat belanja, sapaan (Kak, Mas, Mbak, Bu, Pak), nomor WA, alamat, tagihan, resi |
-| Lainnya | Kalimat penyemangat saat aplikasi dibuka (bisa disembunyikan), kiriman, supplier dengan catatan ongkir dari supplier (mengurangi untung), FAQ, pengaturan, template pesan WA yang bisa diubah, mode gelap, 6 warna tema |
+| Lainnya | Kalimat penyemangat saat aplikasi dibuka (bisa disembunyikan), kiriman, supplier dengan catatan ongkir dari supplier (mengurangi untung), FAQ, pengaturan, template pesan WA yang bisa diubah, mode gelap, 6 warna tema pastel |
 
 Aplikasi tetap bisa dipakai saat sinyal hilang. Perubahan disimpan di HP dulu, lalu dikirim ke Google Sheet begitu online.
 

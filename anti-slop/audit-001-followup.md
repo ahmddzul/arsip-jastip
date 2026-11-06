@@ -129,3 +129,9 @@ C-1 sampai C-5, R-05, R-11, R-15, R-16, R-20, R-21, R-29, R-30, R-31: PASS. Pale
 - Kartu Pesanan masuk (pilihan A): total = sudah dibayar + belum dibayar + nunggu kabar (dicek).
 - Layar pembuka: 120 kalimat, unik per putaran 120, tidak berulang di sambungan putaran. Bisa diketuk, Enter/Spasi/Escape, hilang sendiri.
 - Kontras 6 tema × 2 mode di Beranda (Bulanan, Tahunan), Pengaturan, dan layar pembuka: PASS. Lebar 320 dan 768 px: tidak ada scroll ke samping (baris periode bisa digeser di 320 px). Tidak ada error konsol.
+
+## Tambahan v2.5: tema pastel
+
+- Enam tema diganti pastel (Lavender, Baby Blue, Koral, Peach, Mint, Baby Pink). Token baru `--on-acc` untuk tulisan di atas isian pastel; semua `color: #fff` di atas warna tema diganti.
+- Kontras 11 halaman + Beranda Bulanan + sheet pesanan + layar pembuka + layar sambutan, 6 tema × 2 mode: PASS. Tidak ada error konsol.
+- Batang grafik, progres, dan langkah memakai pastel tua; angka grafik tetap tertulis sehingga informasi tidak bergantung pada warna batang.
