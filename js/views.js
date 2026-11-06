@@ -77,8 +77,9 @@ V.todo = (tone, ic, title, sub, href) =>
    BERANDA (dashboard)
    ========================================================= */
 V.beranda = () => {
-  const p = App.ui.periode;
+  const p = App.pkey();
   const s = Calc.summary(p);
+  const pm = Calc.pesananMasuk(p);
   const bills = Calc.bills(), unpaid = bills.reduce((a, b) => a + b.total, 0);
   const os = Store.all('Pesanan');
   const ready = os.filter(Calc.isReady), readyC = new Set(ready.map(o => o.pelangganId)).size;
@@ -111,8 +112,9 @@ V.beranda = () => {
     .filter(x => x.n).slice(0, 4)
     .forEach(({ b, n }) => todo.push(V.todo('self', 'pie', b.nama, `${n} list nunggu dibagi jatah`, '#/barang/' + b.id)));
 
-  const periods = [['minggu', '7 hari'], ['30', '30 hari'], ['bulan', 'Bulan ini'], ['semua', 'Semua']];
-  const plabel = { minggu: '7 hari terakhir', '30': '30 hari terakhir', bulan: 'bulan ini', semua: 'sejak awal' }[p];
+  const periods = [['minggu', '7 hari'], ['30', '30 hari'], ['bulan', 'Bulanan'], ['tahun', 'Tahunan'], ['semua', 'Semua']];
+  const per = App.ui.periode, plabel = App.plabel();
+  const geser = per === 'bulan' || per === 'tahun', unit = per === 'tahun' ? 'Tahun' : 'Bulan';
 
   const top = Calc.topItems(p);
   const topC = Calc.topCustomers(p);
@@ -126,7 +128,8 @@ V.beranda = () => {
     </div>
     <p class="hero-mood">${mood}</p>
     <div class="hero-card">
-      <div class="seg glass seg-sm" role="group" aria-label="Periode">${periods.map(([v, l]) => `<button type="button" class="${p === v ? 'on' : ''}" aria-pressed="${p === v}" onclick="App.setPeriode('${v}')">${l}</button>`).join('')}</div>
+      <div class="seg glass seg-sm per-seg" role="group" aria-label="Periode">${periods.map(([v, l]) => `<button type="button" class="${per === v ? 'on' : ''}" aria-pressed="${per === v}" onclick="App.setPeriode('${v}')">${l}</button>`).join('')}</div>
+      ${geser ? `<div class="per-nav"><button type="button" class="per-btn" onclick="App.shiftPer(-1)" ${App.canShift(-1) ? '' : 'disabled'} aria-label="${unit} sebelumnya">${I('back')}</button><b aria-live="polite">${App.plabel(true)}</b><button type="button" class="per-btn flip" onclick="App.shiftPer(1)" ${App.canShift(1) ? '' : 'disabled'} aria-label="${unit} berikutnya">${I('back')}</button></div>` : ''}
       <p class="label">Untung bersih ${plabel}</p>
       <p class="big" data-count="${Math.round(s.untung)}">${UI.rp(s.untung)}</p>
       <div class="hero-sub">
@@ -140,6 +143,18 @@ V.beranda = () => {
   ${V.demoBar()}
   ${err ? `<section class="callout bad" style="margin-top:14px" role="alert"><b>Data belum bisa diperbarui</b>${E(Sync.lastError || 'Koneksi ke Google Sheet gagal.')}${Store.meta.lastPull ? ` Angka di bawah dari ${UI.rel(new Date(Store.meta.lastPull).toISOString()).toLowerCase()} pukul ${new Date(Store.meta.lastPull).toTimeString().slice(0, 5)}.` : ''}<div class="btn-row"><button class="btn primary sm" type="button" onclick="App.pull(false,true)">${I('refresh')} Coba lagi</button><a class="btn ghost sm" href="#/pengaturan">Cek koneksi</a></div></section>` : ''}
 
+  <section class="card pm">
+    <div class="sec-h"><h2 class="sec-t">Pesanan masuk</h2><small>${plabel}</small></div>
+    ${pm.n ? `<p class="pm-big">${UI.rp(pm.total)}</p>
+    <p class="pm-sub">${pm.pcs} pcs · ${pm.pelanggan} pelanggan</p>
+    <div class="pm-untung"><div><span>Perkiraan untung</span><b>${UI.rp(pm.untung)}</b></div>${pm.nunggu ? '<small>Termasuk pesanan yang masih nunggu kabar supplier.</small>' : ''}</div>
+    <div class="pm-bar" aria-hidden="true">${[['lunas', 'var(--ok)'], ['belum', 'var(--pm-belum)'], ['nunggu', 'var(--line-strong)']].filter(([k]) => pm[k] > 0).map(([k, c]) => `<i style="flex:${pm[k]};background:${c}"></i>`).join('')}</div>
+    <div class="pm-row"><span><em style="background:var(--ok)"></em>Sudah dibayar</span><b>${UI.rp(pm.lunas)}</b></div>
+    <a class="pm-row" href="#/pesanan?f=bayar"><span><em style="background:var(--pm-belum)"></em>Belum dibayar</span><b>${UI.rp(pm.belum)}</b></a>
+    <a class="pm-row" href="#/pesanan?f=tunggu"><span><em style="background:var(--line-strong)"></em>Masih nunggu kabar supplier</span><b>${UI.rp(pm.nunggu)}</b></a>`
+    : `<p class="muted">Belum ada pesanan yang dicatat ${plabel}.</p>`}
+  </section>
+
   <section class="stat-grid stagger">
     <a class="stat" style="--i:0" href="#/pesanan?f=bayar"><span class="stat-ic tone-warn">${I('wallet')}</span><b>${UI.rp(unpaid)}</b><small>Belum dibayar · ${bills.length} orang</small></a>
     <a class="stat" style="--i:1" href="#/pesanan?f=kirim"><span class="stat-ic tone-info">${I('truck')}</span><b>${readyC} paket</b><small>Siap dikirim</small></a>
@@ -152,9 +167,9 @@ V.beranda = () => {
 
   <section class="card chart">
     <div class="sec-h"><h2 class="sec-t">Grafik untung</h2>
-      <div class="seg seg-sm" style="width:170px" role="group" aria-label="Rentang grafik">${[['hari', '7 hari'], ['bulan', '6 bulan']].map(([v, l]) => `<button type="button" class="${App.ui.chart === v ? 'on' : ''}" aria-pressed="${App.ui.chart === v}" onclick="App.setChart('${v}')">${l}</button>`).join('')}</div>
+      ${per === 'tahun' ? `<small>${App.anchor().y}</small>` : `<div class="seg seg-sm" style="width:170px" role="group" aria-label="Rentang grafik">${[['hari', '7 hari'], ['bulan', '6 bulan']].map(([v, l]) => `<button type="button" class="${App.ui.chart === v ? 'on' : ''}" aria-pressed="${App.ui.chart === v}" onclick="App.setChart('${v}')">${l}</button>`).join('')}</div>`}
     </div>
-    ${V.chart(Calc.series(App.ui.chart))}
+    ${per === 'tahun' ? V.chart(Calc.series('tahun', App.anchor().y), 'tahun') : V.chart(Calc.series(App.ui.chart, per === 'bulan' ? p.slice(2) : null), App.ui.chart)}
   </section>
 
   <section class="card">
@@ -176,19 +191,20 @@ V.beranda = () => {
   </section>`;
 };
 
-V.chart = ser => {
+V.chart = (ser, mode) => {
   const W = 320, H = 160, padX = 8, base = H - 24;
   const max = Math.max(1, ...ser.map(x => x.v));
   const bw = (W - padX * 2) / ser.length;
   const total = ser.reduce((a, x) => a + x.v, 0);
+  const many = ser.length > 7, top = ser.reduce((m, x, i) => x.v > ser[m].v ? i : m, 0); // 12 batang: angka hanya di batang tertinggi
   const bars = ser.map((x, i) => {
     const h = x.v > 0 ? Math.max(6, (x.v / max) * (base - 26)) : 3;
     const X = padX + i * bw + bw * 0.18, w = bw * 0.64, Y = base - h;
     return `<rect class="${x.v > 0 ? 'bar-on' : 'bar-off'}" style="animation-delay:${i * 50}ms" x="${X}" y="${Y}" width="${w}" height="${h}" rx="6"/>`
-      + (x.v > 0 ? `<text class="cv" x="${X + w / 2}" y="${Y - 6}">${UI.rpShort(x.v)}</text>` : '')
+      + (x.v > 0 && (!many || i === top) ? `<text class="cv" x="${X + w / 2}" y="${Y - 6}">${UI.rpShort(x.v)}</text>` : '')
       + `<text class="cl" x="${X + w / 2}" y="${H - 6}">${x.l}</text>`;
   }).join('');
-  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Grafik untung per ${App.ui.chart === 'hari' ? 'hari, 7 hari terakhir' : 'bulan, 6 bulan terakhir'}">${bars}</svg>
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Grafik untung per ${mode === 'hari' ? 'hari, 7 hari terakhir' : mode === 'tahun' ? 'bulan sepanjang tahun ' + App.anchor().y : 'bulan, 6 bulan'}">${bars}</svg>
     <div class="chart-foot"><span>Total periode</span><b>${UI.rp(total)}</b></div>`;
 };
 
@@ -517,7 +533,7 @@ V.lainnya = () => {
     ${Store.meta.sheetUrl ? `<section class="card"><a class="menu-row" href="${E(Store.meta.sheetUrl)}" target="_blank" rel="noopener"><span class="todo-ic tone-ok">${I('table')}</span><div><b>Buka Google Sheet</b><small>Lihat dan backup data mentah</small></div>${I('chev', 'chev')}</a></section>` : ''}
     ${V.kopi()}
     <div style="text-align:center;margin-top:22px">${LOGO('welcome-mini')}</div>
-    <p class="hint" style="text-align:center;margin:6px 0 0">Arsip Jastip · versi 2.3</p>
+    <p class="hint" style="text-align:center;margin:6px 0 0">Arsip Jastip · versi 2.4</p>
     ${V.credit()}`;
 };
 
@@ -531,6 +547,7 @@ V.pengaturan = () => {
   + `<h3 class="sec-label">Tampilan</h3>
     <section class="card form" style="margin-top:0">
       <fieldset class="field"><legend>Mode</legend><div class="seg" id="sMode">${[['auto', 'Ikuti HP', 'auto'], ['light', 'Terang', 'sun'], ['dark', 'Gelap', 'moon']].map(([v, l, ic]) => `<button type="button" class="${Theme.mode === v ? 'on' : ''}" aria-pressed="${Theme.mode === v}" onclick="App.setMode('${v}')">${l}</button>`).join('')}</div></fieldset>
+      <fieldset class="field"><legend>Kalimat penyemangat saat aplikasi dibuka</legend><div class="seg">${[[1, 'Tampilkan'], [0, 'Sembunyikan']].map(([v, l]) => `<button type="button" class="${+Quote.on() === v ? 'on' : ''}" aria-pressed="${+Quote.on() === v}" onclick="App.setSplash(${v})">${l}</button>`).join('')}</div></fieldset>
       <fieldset class="field"><legend>Warna tema</legend><div class="swatches">${Theme.THEMES.map(([v, l, c]) => `<button type="button" class="swatch" aria-pressed="${Theme.theme === v}" onclick="App.setTheme('${v}')"><i style="background:${c}"></i>${l}</button>`).join('')}</div></fieldset>
     </section>
     <h3 class="sec-label">Tentang kamu</h3>

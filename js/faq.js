@@ -35,14 +35,14 @@ V.faq = () => {
 
   <h3 class="sec-label">Fitur</h3>
   <section class="card faq" style="margin-top:0">
-    ${q('Beranda', 'Untung bersih per periode, tagihan yang belum dibayar, paket siap kirim, daftar hal yang perlu diurus, grafik untung, barang paling cuan, pelanggan setia, dan peluang dapat per supplier.', true)}
+    ${q('Beranda', 'Untung bersih dan pesanan masuk per periode (7 hari, 30 hari, per bulan, per tahun, atau semua), tagihan yang belum dibayar, paket siap kirim, daftar hal yang perlu diurus, grafik untung, barang paling cuan, pelanggan setia, dan peluang dapat per supplier.', true)}
     ${q('Barang', 'Catat PO dengan varian dan harga berbeda, diskon beli banyak, foto opsional, teks promosi otomatis, salin list untuk grup, bagi jatah sesuai urutan, stok dan barang sisa, serta rincian untung per pesanan.')}
     ${q('Pesanan', 'Semua pesanan dari semua barang, dengan filter Nunggu kabar, Belum bayar, Siap kirim, Dikirim, Perlu refund, Buat aku, dan Batal. Ketuk satu pesanan untuk mengubah status, pembayaran, jumlah, harga, atau diskon.')}
     ${q('Pelanggan', 'Riwayat belanja tiap pelanggan, sapaan (Kak, Mas, Mbak, Bu, Pak), nomor WA, alamat, tagihan, dan resi kiriman. Pelanggan baru tercatat otomatis saat kamu menambah list.')}
     ${q('Kiriman & supplier', 'Kiriman menyimpan kurir, resi, ongkir yang ditagih, dan ongkir yang kamu bayar ke kurir. Supplier menyimpan kontak, persentase seberapa sering barang didapat, dan ongkir yang kamu bayar saat supplier mengirim barang ke kamu.')}
     ${q('Ongkir dari supplier', 'Kalau kamu yang menanggung ongkir dari supplier ke kamu, catat di Lainnya, Supplier, pilih suppliernya, lalu Catat ongkir dari supplier. Bisa juga dari halaman barang: ketuk angka untung, lalu Catat ongkir dari supplier. Pilih barang yang ada di kiriman itu supaya ongkirnya dibagi sesuai jumlah pcs yang datang. Kalau tidak memilih barang, ongkirnya hanya mengurangi untung total. Untung di Beranda selalu sudah dikurangi ongkir ini.')}
     ${q('Template pesan', 'Teks promosi, promosi barang sisa, tagihan, sapaan chat, dan kabar kiriman bisa kamu ubah sendiri di Pengaturan. Kata kunci seperti {sapaan} dan {total} otomatis diganti isi aslinya.')}
-    ${q('Tampilan', 'Mode terang, gelap, atau ikuti HP. Enam warna tema: Ungu, Biru, Merah, Oranye, Hijau, dan Pink. Pilihan ini tersimpan di masing-masing HP.')}
+    ${q('Tampilan', 'Mode terang, gelap, atau ikuti HP. Enam warna tema: Ungu, Biru, Merah, Oranye, Hijau, dan Pink. Kalimat penyemangat saat aplikasi dibuka bisa ditampilkan atau disembunyikan. Pilihan ini tersimpan di masing-masing HP.')}
   </section>
 
   <h3 class="sec-label">Pertanyaan yang sering muncul</h3>
@@ -51,6 +51,8 @@ V.faq = () => {
     ${q('Arti titik kecil di pojok kanan atas?', 'Hijau: tersimpan di Google Sheet. Kuning: sedang dikirim. Abu-abu: sedang offline, data aman di HP dan dikirim otomatis saat ada sinyal. Merah: koneksi bermasalah, ketuk titiknya untuk melihat penyebabnya.')}
     ${q('Bisa dipakai tanpa internet?', 'Bisa. Aplikasi tetap terbuka dan kamu tetap bisa mencatat. Semua perubahan disimpan di HP dulu, lalu dikirim ke Google Sheet begitu internet kembali.')}
     ${q('Untungnya dihitung dari mana?', 'Untung = (harga jual dikurangi modal) dikali jumlah, dikurangi diskon, hanya untuk pesanan berstatus Dapat. Selisih ongkir yang ditagih dan ongkir ke kurir ikut dihitung, lalu dikurangi ongkir dari supplier. Barang Buat aku tidak dihitung sebagai untung. Ketuk angka untung di halaman barang untuk melihat rinciannya.')}
+    ${q('Apa bedanya Untung bersih dan Pesanan masuk?', 'Untung bersih hanya menghitung pesanan yang sudah Dapat, menurut tanggal ditandai Dapat. Pesanan masuk menghitung semua yang memesan (Nunggu kabar dan Dapat) menurut tanggal pesanan dicatat, termasuk yang belum bayar. Pakai Pesanan masuk untuk melihat performa jualan bulan itu walau PO-nya masih jalan. Perkiraan untung di kartu itu bisa berkurang kalau ada barang yang nggak dapat.')}
+    ${q('Cara melihat bulan atau tahun sebelumnya?', 'Di kartu untung Beranda, pilih Bulanan atau Tahunan, lalu ketuk panah kiri untuk mundur. Grafik pada pilihan Tahunan menampilkan untung per bulan sepanjang tahun itu.')}
     ${q('Bagaimana barang sisa tercatat?', 'Saat Bagi jatah, isi jumlah yang benar-benar kamu dapat dari supplier, termasuk lebihannya. Kalau ada pesanan yang dibatalkan, barangnya otomatis kembali jadi sisa. Barang sisa muncul di Beranda dan di filter Ada sisa pada menu Barang.')}
     ${q('Pelanggan sudah bayar tapi barangnya nggak dapat?', 'Buka pesanannya. Pilih Uang dikembalikan, atau Ganti barang lain. Pesanan pengganti otomatis tercatat lunas.')}
     ${q('Bagaimana menyambungkan HP kedua?', 'Di HP pertama: Lainnya, Pengaturan, Kode sambung. Kirim kodenya ke WA sendiri. Di HP kedua, pasang aplikasi ke layar utama dulu, buka, lalu tempel kode itu di kolom Kode sambung.')}

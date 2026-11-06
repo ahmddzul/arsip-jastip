@@ -61,6 +61,7 @@ const IG = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="curr
 
 const UI = {
   BULAN: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'],
+  BULAN_PANJANG: ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'],
   sheets: [],
   _ignorePop: 0,
 
@@ -317,3 +318,29 @@ window.addEventListener('popstate', () => {
   const top = UI.sheets[UI.sheets.length - 1];
   if (top) top.close(true);
 });
+
+/* ---- Pengaman tinggi layar iPhone ----
+   Di aplikasi layar utama iPhone, setelah keyboard ditutup atau kembali dari aplikasi lain,
+   tinggi layar kadang menyusut dan tidak kembali. Kalau terdeteksi, paksa iPhone menghitung ulang. */
+const Viewport = {
+  max: 0, w: 0,
+  typing: () => /INPUT|TEXTAREA|SELECT/.test((document.activeElement || {}).tagName || ''),
+  init() {
+    this.max = innerHeight; this.w = innerWidth;
+    addEventListener('resize', () => {
+      if (innerWidth !== this.w) { this.w = innerWidth; this.max = innerHeight; return; } // HP diputar
+      if (!this.typing()) this.max = Math.max(this.max, innerHeight);
+    });
+    document.addEventListener('focusout', e => { if (/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) setTimeout(() => this.check(), 160); });
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') setTimeout(() => this.check(), 300); });
+    addEventListener('pageshow', () => setTimeout(() => this.check(), 300));
+  },
+  check() {
+    if (this.typing() || this.max - innerHeight <= 4) return;
+    const app = document.getElementById('app'), v = document.getElementById('view'), y = v.scrollTop;
+    app.style.display = 'none'; void app.offsetHeight; app.style.display = '';
+    v.scrollTop = y;
+    window.scrollTo(0, 0); // halaman luar tidak boleh ikut tergeser
+  }
+};
+

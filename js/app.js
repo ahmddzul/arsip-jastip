@@ -78,26 +78,34 @@ const App = {
     if (big && anim) UI.countUp(big, +big.dataset.count, UI.rp);
     this.onScroll();
   },
-  onScroll() { const h = document.querySelector('.vhead'); if (h) h.classList.toggle('scrolled', window.scrollY > 4); },
+  sc: () => document.getElementById('view'),
+  onScroll() { const h = document.querySelector('.vhead'); if (h) h.classList.toggle('scrolled', this.sc().scrollTop > 4); },
+  toTop() { const v = this.sc(); v.scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); },
   animate(view) { view.classList.remove('enter'); void view.offsetWidth; view.classList.add('enter'); },
 
   paintNav() {
     const cur = this.NAV_PARENT[this.route.name] || this.route.name;
     const unpaid = Calc.bills().length;
     document.getElementById('bnav').innerHTML = this.NAV.map(([k, ic, l]) =>
-      `<a href="#/${k}" class="${cur === k ? 'on' : ''}" ${cur === k ? 'aria-current="page"' : ''} onclick="this.classList.add('tap')">${UI.icon(ic)}<span>${l}</span>${k === 'pesanan' && unpaid ? `<span class="badge">${unpaid}</span>` : ''}</a>`).join('');
+      `<a href="#/${k}" class="${cur === k ? 'on' : ''}" ${cur === k ? 'aria-current="page"' : ''} onclick="App.navTap(event,this,'${k}')">${UI.icon(ic)}<span>${l}</span>${k === 'pesanan' && unpaid ? `<span class="badge">${unpaid}</span>` : ''}</a>`).join('');
+  },
+
+  /** Ketuk menu yang sedang aktif: kembali ke atas (kalau di halaman detail, kembali ke daftarnya). */
+  navTap(e, a, k) {
+    a.classList.add('tap');
+    if (this.route.name === k && !this.route.id && !Object.keys(this.route.params || {}).length) { e.preventDefault(); this.toTop(); }
   },
 
   /** Gambar ulang halaman tanpa animasi; posisi gulir & fokus input dipertahankan. */
   refresh() {
     cancelAnimationFrame(this._raf);
     this._raf = requestAnimationFrame(() => {
-      const y = window.scrollY;
+      const y = this.sc().scrollTop;
       const a = document.activeElement;
       const fid = a && a.id && document.getElementById('view').contains(a) ? a.id : null;
       const sel = fid && typeof a.selectionStart === 'number' ? [a.selectionStart, a.selectionEnd] : null;
       this.render(false);
-      window.scrollTo(0, y);
+      this.sc().scrollTop = y;
       if (fid) { const el = document.getElementById(fid); if (el) { el.focus({ preventScroll: true }); if (sel) try { el.setSelectionRange(...sel); } catch (e) { /* abaikan */ } } }
     });
   },
@@ -123,7 +131,38 @@ const App = {
     if (Object.keys(this.route.params).length) { history.replaceState(null, '', '#/' + this.route.name); this.route.params = {}; }
     this.render(false);
   },
+  setSplash(v) { Quote.set(v); this.refresh(); if (v) Quote.show(); },
   setPeriode(p) { this.ui.periode = p; this.refresh(); },
+  /* Bulanan & Tahunan: bulan/tahun yang sedang dilihat (geser dengan tombol di kartu untung) */
+  pAnchor: null,
+  anchor() { if (!this.pAnchor) { const n = new Date(); this.pAnchor = { y: n.getFullYear(), m: n.getMonth() }; } return this.pAnchor; },
+  /** Kunci periode untuk Calc: 'minggu' | '30' | 'semua' | 'm:2026-10' | 'y:2026' */
+  pkey() {
+    const p = this.ui.periode, a = this.anchor();
+    if (p === 'bulan') return `m:${a.y}-${String(a.m + 1).padStart(2, '0')}`;
+    if (p === 'tahun') return 'y:' + a.y;
+    return p;
+  },
+  plabel(short) {
+    const p = this.ui.periode, a = this.anchor();
+    if (p === 'bulan') return (short ? '' : 'bulan ') + UI.BULAN_PANJANG[a.m] + ' ' + a.y;
+    if (p === 'tahun') return (short ? '' : 'tahun ') + a.y;
+    return { minggu: '7 hari terakhir', '30': '30 hari terakhir', semua: 'sejak awal' }[p];
+  },
+  canShift(d) {
+    const a = this.anchor(), n = new Date(), f = Calc.firstDate(), yr = this.ui.periode === 'tahun';
+    const cur = yr ? a.y : a.y * 12 + a.m;
+    const max = yr ? n.getFullYear() : n.getFullYear() * 12 + n.getMonth();
+    const min = yr ? f.getFullYear() : f.getFullYear() * 12 + f.getMonth();
+    return d > 0 ? cur < max : cur > min;
+  },
+  shiftPer(d) {
+    if (!this.canShift(d)) return;
+    const a = this.anchor();
+    if (this.ui.periode === 'tahun') a.y += d;
+    else { const t = a.y * 12 + a.m + d; a.y = Math.floor(t / 12); a.m = t % 12; }
+    this.refresh();
+  },
   setChart(c) { this.ui.chart = c; this.refresh(); },
   setVar(v) { this.ui.item.var = v; this.refresh(); },
   toggleReorder() { this.ui.item.reorder = !this.ui.item.reorder; this.refresh(); },
@@ -311,18 +350,20 @@ const App = {
   boot() {
     Theme.apply();
     Store.load();
-    window.addEventListener('scroll', () => this.onScroll(), { passive: true });
+    this.sc().addEventListener('scroll', () => this.onScroll(), { passive: true });
+    Viewport.init();
     window.addEventListener('hashchange', () => {
       this._moved = true;
       this.route = this.parse();
       this.render();
-      window.scrollTo(0, 0);
+      this.sc().scrollTop = 0;
     });
     this.route = this.parse();
     if (Store.settings.namaPanggilan && this.ready()) this.ui.welcomeStep = 2;
     if (Api.isDemo() && !Store.hasData()) Demo.seed();
     Sync.setState(Api.isDemo() ? 'demo' : Sync.queue.length ? 'pending' : 'ok');
     this.render();
+    if (this.ready() && Quote.on()) Quote.show();
 
     if (Api.isConnected()) {
       this.pull(true);

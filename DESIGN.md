@@ -78,3 +78,15 @@ Semua animasi mati jika HP diatur "kurangi gerakan".
 - Ajakan traktir kopi tidak boleh terasa memaksa: tidak ada pop-up, tidak ada pengingat berulang, dan selalu disebut bahwa semua fitur tetap gratis.
 - Tempat: kartu tetap di Lainnya, satu jawaban di FAQ, dan kartu sekali di Beranda setelah 10 tagihan lunas. Kartu Beranda hilang selamanya setelah diketuk atau ditutup.
 - Ikon cangkir kopi dengan warna tema, bukan logo Saweria.
+
+## Layar pembuka
+
+- Muncul setiap aplikasi dibuka dari ikon, hanya untuk pengguna yang sudah tersambung atau mode coba. Hilang sendiri setelah sekitar 2,4 detik, atau saat diketuk. Bisa disembunyikan di Pengaturan.
+- Isi: logo, sapaan sesuai waktu, dan satu kalimat penyemangat. Tanpa emoji.
+- 120 kalimat khas jastip: sekitar 65% gaya sedang, 25% santai/lucu, 10% formal. Diacak tanpa pengulangan sampai semuanya tampil.
+
+## Gulir
+
+- Yang digulir hanya area isi (`#view`), bukan halaman. Judul menempel di atas, menu bawah menempel di bawah. Ini menghindari bug iPhone pada aplikasi layar utama yang membuat menu bawah hilang dan isi tidak bisa digulir habis.
+- Mengetuk menu bawah yang sedang aktif menggulir ke atas.
+

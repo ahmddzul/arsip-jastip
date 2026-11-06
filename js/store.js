@@ -211,6 +211,9 @@ const Calc = {
     if (p === 'minggu') { const from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6); return d >= from; }
     if (p === '30') { const from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 29); return d >= from; }
     if (p === 'bulan') return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+    // Bulan tertentu 'm:2026-10' dan tahun tertentu 'y:2026' (dipakai pilihan Bulanan/Tahunan)
+    if (p.startsWith('m:')) { const [y, m] = p.slice(2).split('-').map(Number); return d.getFullYear() === y && d.getMonth() === m - 1; }
+    if (p.startsWith('y:')) return d.getFullYear() === +p.slice(2);
     return true;
   },
   soldDate: o => o.tglDapat || o.diubah || o.dibuat,
@@ -228,6 +231,26 @@ const Calc = {
     });
     Calc.masuk().forEach(k => { if (Calc.inPeriod(k.tanggal || k.dibuat, p)) ongkirSup += +k.ongkirBiaya || 0; });
     return { omzet, untung: untung + ongkir - ongkirSup, untungBarang: untung, ongkir, ongkirSup, pcs, self };
+  },
+
+  /* Pesanan masuk: semua yang memesan (Nunggu kabar + Dapat) menurut tanggal dicatat, walau belum dibayar.
+     Nggak dapat, Batal, dan Buat aku tidak dihitung. */
+  pesananMasuk(p) {
+    const r = { total: 0, untung: 0, pcs: 0, pelanggan: 0, lunas: 0, belum: 0, nunggu: 0, n: 0 }, cs = new Set();
+    Store.all('Pesanan').forEach(o => {
+      if ((o.status !== 'list' && o.status !== 'dapat') || Calc.isSelf(o) || !Calc.inPeriod(o.dibuat, p)) return;
+      const t = Calc.total(o);
+      r.total += t; r.untung += Calc.profit(o); r.pcs += +o.qty || 0; r.n++; cs.add(o.pelangganId);
+      if (o.bayar === 'lunas') r.lunas += t; else if (o.status === 'dapat') r.belum += t; else r.nunggu += t;
+    });
+    r.pelanggan = cs.size;
+    return r;
+  },
+  /* Bulan paling awal yang punya data, untuk batas tombol mundur */
+  firstDate() {
+    let min = null;
+    Store.all('Pesanan').forEach(o => { const d = new Date(o.dibuat); if (!isNaN(d) && (!min || d < min)) min = d; });
+    return min || new Date();
   },
 
   /* Kiriman ke pelanggan (keluar) dan ongkir dari supplier ke kamu (masuk) disimpan di tabel yang sama. */
@@ -263,13 +286,18 @@ const Calc = {
   },
   billOf: cid => Calc.bills().find(b => b.pelangganId === cid) || null,
 
-  series(mode) {
+  /* mode: 'hari' (7 hari terakhir), 'bulan' (6 bulan sampai bulan `end`), 'tahun' (12 bulan pada tahun `end`) */
+  series(mode, end) {
     const now = new Date(), out = [];
     if (mode === 'hari') {
       const H = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
       for (let i = 6; i >= 0; i--) { const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i); out.push({ k: UI.ymd(d), l: i === 0 ? 'Hari ini' : H[d.getDay()], v: 0 }); }
+    } else if (mode === 'tahun') {
+      const y = +end || now.getFullYear();
+      for (let m = 0; m < 12; m++) out.push({ k: y + '-' + m, l: UI.BULAN[m], v: 0 });
     } else {
-      for (let i = 5; i >= 0; i--) { const d = new Date(now.getFullYear(), now.getMonth() - i, 1); out.push({ k: d.getFullYear() + '-' + d.getMonth(), l: UI.BULAN[d.getMonth()], v: 0 }); }
+      const e = end ? new Date(+end.slice(0, 4), +end.slice(5, 7) - 1, 1) : now;
+      for (let i = 5; i >= 0; i--) { const d = new Date(e.getFullYear(), e.getMonth() - i, 1); out.push({ k: d.getFullYear() + '-' + d.getMonth(), l: UI.BULAN[d.getMonth()], v: 0 }); }
     }
     const key = iso => { const d = new Date(iso); if (isNaN(d)) return ''; return mode === 'hari' ? UI.ymd(d) : d.getFullYear() + '-' + d.getMonth(); };
     const idx = Object.fromEntries(out.map((x, i) => [x.k, i]));

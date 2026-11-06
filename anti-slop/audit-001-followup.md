@@ -121,3 +121,11 @@ C-1 sampai C-5, R-05, R-11, R-15, R-16, R-20, R-21, R-29, R-30, R-31: PASS. Pale
 - Untung bersih (Beranda, grafik, barang paling cuan) dikurangi ongkir ini. Kalau barang dipilih, ongkir dibagi sesuai pcs yang datang (stok, atau pcs Dapat kalau stok kosong); kalau tidak dipilih, hanya mengurangi untung total.
 - Pintu masuk: sheet Supplier dan Rincian untung di halaman barang. Kiriman ke pelanggan, tagihan, dan riwayat pelanggan tidak ikut menampilkan catatan ini.
 - Kontras 6 tema × 2 mode di Beranda, Supplier, Detail barang, dan form ongkir: PASS. Lebar 320 dan 768 px: tidak ada scroll ke samping. Tidak ada error konsol.
+
+## Tambahan v2.4
+
+- Gulir dipindah ke `#view` (html/body tidak digulir), plus pengaman yang memaksa hitung ulang tinggi layar setelah keyboard ditutup atau kembali dari aplikasi lain. Diuji di Chromium mobile: isi bisa digulir sampai habis, judul tetap menempel, menu bawah tetap di bawah, posisi gulir terjaga saat data diperbarui, halaman baru mulai dari atas, sheet mengunci gulir latar. Bug iPhone aslinya belum bisa dipancing di sini; perlu dicek di iPhone.
+- Periode: 7 hari, 30 hari, Bulanan, Tahunan, Semua. Tombol mundur dibatasi bulan/tahun pertama yang punya data, tombol maju dibatasi bulan/tahun sekarang. Grafik tahunan 12 batang, totalnya sama dengan untung tahun itu.
+- Kartu Pesanan masuk (pilihan A): total = sudah dibayar + belum dibayar + nunggu kabar (dicek).
+- Layar pembuka: 120 kalimat, unik per putaran 120, tidak berulang di sambungan putaran. Bisa diketuk, Enter/Spasi/Escape, hilang sendiri.
+- Kontras 6 tema × 2 mode di Beranda (Bulanan, Tahunan), Pengaturan, dan layar pembuka: PASS. Lebar 320 dan 768 px: tidak ada scroll ke samping (baris periode bisa digeser di 320 px). Tidak ada error konsol.
