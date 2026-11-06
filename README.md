@@ -146,7 +146,7 @@ Kedua HP membaca dan menulis ke Google Sheet yang sama.
 | Titik di pojok kanan atas berwarna abu-abu | HP sedang offline. Data aman dan terkirim otomatis saat ada sinyal. |
 | Kode kunci tersebar | Di Google Sheet, menu **Arsip Jastip**, **Buat kode kunci baru**. Sambungkan ulang semua HP lewat Pengaturan, **Ganti koneksi**. |
 
-Pertanyaan lain ada di menu **Lainnya**, **FAQ & panduan** di dalam aplikasi.
+Pertanyaan lain ada di menu **Lainnya**, **FAQ & panduan** di dalam aplikasi. 
 
 ---
 
