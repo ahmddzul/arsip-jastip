@@ -135,3 +135,9 @@ C-1 sampai C-5, R-05, R-11, R-15, R-16, R-20, R-21, R-29, R-30, R-31: PASS. Pale
 - Enam tema diganti pastel (Lavender, Baby Blue, Koral, Peach, Mint, Baby Pink). Token baru `--on-acc` untuk tulisan di atas isian pastel; semua `color: #fff` di atas warna tema diganti.
 - Kontras 11 halaman + Beranda Bulanan + sheet pesanan + layar pembuka + layar sambutan, 6 tema × 2 mode: PASS. Tidak ada error konsol.
 - Batang grafik, progres, dan langkah memakai pastel tua; angka grafik tetap tertulis sehingga informasi tidak bergantung pada warna batang.
+
+## Tambahan v2.6: ilustrasi
+
+- 9 ilustrasi WebP (latar dibuang, sisa bayangan Gemini di gambar offline dibersihkan) + pola SVG sebagai mask. Ilustrasi bersifat dekoratif (`alt=""`), judul dan teks di bawahnya tetap membawa pesannya.
+- Kontras Beranda, Lainnya, Pesanan, dan layar pembuka di 6 tema × 2 mode: PASS. Lebar 320 dan 768 px: tidak ada scroll ke samping. Tidak ada request gagal atau error konsol.
+- Semua gambar ikut disimpan service worker, jadi tetap tampil saat offline.

@@ -1,11 +1,13 @@
 /* Service worker: bikin aplikasi tetap bisa dibuka walau sinyal jelek.
    Data tetap diambil dari Google Sheet; yang disimpan di sini cuma tampilan aplikasinya.
    Kalau kamu mengubah file aplikasi, naikkan angka VERSION supaya HP mengambil versi baru. */
-const VERSION = 'arsip-jastip-v8';
+const VERSION = 'arsip-jastip-v9';
 const SHELL = [
   './', 'index.html', 'css/style.css', 'manifest.webmanifest',
   'js/ui.js', 'js/api.js', 'js/store.js', 'js/demo.js', 'js/views.js', 'js/sheets.js', 'js/faq.js', 'js/quotes.js', 'js/app.js',
   'fonts/plus-jakarta-sans-latin-wght-normal.woff2',
+  'img/sambut.webp', 'img/rak.webp', 'img/clipboard.webp', 'img/chat.webp', 'img/paket.webp', 'img/kios.webp',
+  'img/lunas.webp', 'img/offline.webp', 'img/kopi.webp', 'img/pola.svg',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'
 ];
 

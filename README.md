@@ -146,7 +146,7 @@ Kedua HP membaca dan menulis ke Google Sheet yang sama.
 | Titik di pojok kanan atas berwarna abu-abu | HP sedang offline. Data aman dan terkirim otomatis saat ada sinyal. |
 | Kode kunci tersebar | Di Google Sheet, menu **Arsip Jastip**, **Buat kode kunci baru**. Sambungkan ulang semua HP lewat Pengaturan, **Ganti koneksi**. |
 
-Pertanyaan lain ada di menu **Lainnya**, **FAQ & panduan** di dalam aplikasi. 
+Pertanyaan lain ada di menu **Lainnya**, **FAQ & panduan** di dalam aplikasi.
 
 ---
 
@@ -158,6 +158,7 @@ css/style.css           tampilan, tema, mode gelap
 js/                     logika aplikasi
 fonts/                  huruf Plus Jakarta Sans
 icons/                  ikon aplikasi
+img/                    ilustrasi dan pola ornamen
 apps-script/Code.gs     server untuk Google Apps Script
 DESIGN.md               arah desain
 ```
@@ -171,3 +172,5 @@ Arsip Jastip gratis dan semua fiturnya bisa dipakai tanpa bayar. Kalau aplikasi 
 Dibuat oleh **@ahmddzul** · [instagram.com/ahmddzul](https://instagram.com/ahmddzul)
 
 Huruf Plus Jakarta Sans oleh Tokotype, lisensi SIL Open Font License.
+
+Ilustrasi dibuat dengan bantuan Google Gemini, lalu dirapikan untuk aplikasi.

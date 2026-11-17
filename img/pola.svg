@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Pola doodle Arsip Jastip: kotak paket, label harga, gelembung chat, tas, ponsel. Dipakai sebagai mask, jadi warnanya mengikuti tema. -->
+  <g transform="translate(18 22) rotate(-8)"><path d="M2 10 20 2l18 8v20l-18 8-18-8z"/><path d="M2 10l18 8 18-8M20 18v20M11 6l18 8"/></g>
+  <g transform="translate(150 16) rotate(14)"><path d="M4 14 16 2h14v14L18 28z"/><circle cx="24" cy="8" r="2.4"/></g>
+  <g transform="translate(92 70) rotate(-4)"><path d="M6 2h30a6 6 0 0 1 6 6v12a6 6 0 0 1-6 6H18l-8 7v-7H6a6 6 0 0 1-6-6V8a6 6 0 0 1 6-6z"/></g>
+  <g transform="translate(190 96) rotate(10)"><path d="M3 12h26l-3 24H6z"/><path d="M10 12V8a6 6 0 0 1 12 0v4"/></g>
+  <g transform="translate(26 120) rotate(-14)"><rect x="0" y="0" width="22" height="36" rx="5"/><path d="M8 30h6"/></g>
+  <g transform="translate(120 150) rotate(6)"><path d="M2 10 20 2l18 8v20l-18 8-18-8z"/><path d="M2 10l18 8 18-8M20 18v20"/></g>
+  <g transform="translate(62 196) rotate(-20)"><path d="M4 14 16 2h14v14L18 28z"/><circle cx="24" cy="8" r="2.4"/></g>
+  <g transform="translate(196 196) rotate(-6)"><path d="M5 2h22a5 5 0 0 1 5 5v9a5 5 0 0 1-5 5H14l-6 5v-5H5a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5z"/></g>
+  <g fill="#000" stroke="none"><circle cx="78" cy="30" r="2.6"/><circle cx="214" cy="62" r="2.6"/><circle cx="86" cy="132" r="2.6"/><circle cx="178" cy="226" r="2.6"/><circle cx="14" cy="216" r="2.6"/></g>
+  <path d="M124 38l8-6M170 140l7 7M30 82l-6 7M224 160l-7 5M104 214l8-3"/>
+</svg>

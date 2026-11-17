@@ -92,3 +92,10 @@ Semua animasi mati jika HP diatur "kurangi gerakan".
 - Yang digulir hanya area isi (`#view`), bukan halaman. Judul menempel di atas, menu bawah menempel di bawah. Ini menghindari bug iPhone pada aplikasi layar utama yang membuat menu bawah hilang dan isi tidak bisa digulir habis.
 - Mengetuk menu bawah yang sedang aktif menggulir ke atas.
 
+## Ilustrasi dan ornamen
+
+- 9 ilustrasi spot dibuat dengan Gemini dari satu prompt (satu lembar 3×3, supaya gayanya seragam): flat vector, garis gelap #2A2D3A yang membulat, isian dari enam warna pastel tema, tanpa tulisan, logo, atau orang. Latar putih dibuang, disimpan sebagai WebP 360 px (total sekitar 130 KB) di folder `img/`.
+- Tempat: layar sambutan (kotak arsip), daftar kosong Barang (rak), Pesanan/list (clipboard), Pelanggan (gelembung chat), Kiriman dan siap kirim (paket), Supplier (kios), semua sudah bayar (dompet), gagal tersambung (awan offline), kartu Beliin aku kopi (cangkir). Hasil pencarian kosong dan filter lain tetap memakai ikon garis.
+- Di mode gelap, ilustrasi diberi alas persegi membulat berwarna terang (#E9E7F1) supaya garis gelapnya tetap terlihat.
+- Pola doodle (`img/pola.svg`, digambar ulang sebagai vektor dari hasil Gemini) dipakai sebagai mask: garis putih tipis di kartu untung Beranda, dan garis warna tema di layar pembuka dengan bagian tengah dikosongkan supaya kalimat tetap mudah dibaca.
+

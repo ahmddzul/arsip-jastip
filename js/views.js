@@ -20,8 +20,11 @@ V.head = (title, o = {}) => `
     <div class="vhead-a">${o.right || ''}${V.syncBtn()}</div>
   </header>${V.demoBar()}`;
 
+/* Ilustrasi untuk tampilan kosong. Ikon yang tidak ada di daftar ini tetap memakai ikon garis. */
+const ART = { box: 'rak', list: 'clipboard', users: 'chat', truck: 'paket', store: 'kios', cloud: 'offline', lunas: 'lunas' };
+V.art = (name, cls = '') => `<div class="art ${cls}"><img src="img/${name}.webp" alt="" width="180" height="180" decoding="async"></div>`;
 V.empty = (ic, title, text, cta = '', tone = '') =>
-  `<div class="empty"><div class="empty-art ${tone}">${I(ic)}</div><h3>${title}</h3><p>${text}</p>${cta}</div>`;
+  `<div class="empty">${ART[ic] ? V.art(ART[ic], 'empty-ill') : `<div class="empty-art ${tone}">${I(ic)}</div>`}<h3>${title}</h3><p>${text}</p>${cta}</div>`;
 
 V.search = (key, ph) => `<label class="search"><span class="sr-only">${ph}</span>${I('search')}<input id="q-${key}" type="search" enterkeyhint="search" placeholder="${ph}" value="${E(App.ui[key].q || '')}" oninput="App.setQ('${key}',this.value)" autocomplete="off"></label>`;
 
@@ -345,7 +348,7 @@ V.pesananList = () => {
 
   if (f === 'bayar') {
     const bills = Calc.bills().filter(b => { const c = Store.get('Pelanggan', b.pelangganId); return !q || (c && c.nama.toLowerCase().includes(q)) || b.orders.some(match); });
-    if (!bills.length) return V.empty('check', 'Semua sudah bayar', 'Nggak ada tagihan yang nyangkut.');
+    if (!bills.length) return V.empty('lunas', 'Semua sudah bayar', 'Nggak ada tagihan yang nyangkut.');
     return bills.map((b, i) => V.billCard(b, i)).join('');
   }
   if (f === 'kirim') {
@@ -502,7 +505,7 @@ V.credit = () => `<a class="credit" href="https://instagram.com/ahmddzul" target
 const SAWERIA = 'https://saweria.co/ahmddzul';
 const KOPI_KEY = 'aj_kopi_done';
 V.kopi = () => `<section class="card kopi">
-    <span class="kopi-ic">${I('cup')}</span>
+    ${V.art('kopi', 'kopi-ill')}
     <div><h2 class="sec-t">Beliin aku kopi?</h2>
     <p>Arsip Jastip dibuat sendiri oleh @ahmddzul. Kalau aplikasi ini bikin urusan jastipmu lebih rapi, kamu bisa traktir kopi lewat Saweria. Semua fitur tetap bisa dipakai tanpa dukungan.</p>
     <a class="btn ghost sm" href="${SAWERIA}" target="_blank" rel="noopener">${I('cup')} Traktir kopi di Saweria<span class="sr-only">(membuka Saweria)</span></a></div>
@@ -514,7 +517,7 @@ V.kopiNudge = () => {
   const lunas = Store.all('Pesanan').filter(o => o.bayar === 'lunas' && o.pelangganId !== SELF_ID && o.status !== 'batal').length;
   if (lunas < 10) return '';
   return `<section class="card kopi" id="kopiNudge">
-    <span class="kopi-ic">${I('cup')}</span>
+    ${V.art('kopi', 'kopi-ill')}
     <div><h2 class="sec-t">10 tagihan sudah lunas lewat Arsip Jastip</h2>
     <p>Kalau aplikasi ini membantu, boleh traktir kopi pembuatnya.</p>
     <div class="btn-row"><a class="btn primary sm" href="${SAWERIA}" target="_blank" rel="noopener" onclick="App.kopiDone(false)">${I('cup')} Traktir kopi<span class="sr-only">(membuka Saweria)</span></a><button class="btn ghost sm" type="button" onclick="App.kopiDone(true)">Nanti saja</button></div></div>
@@ -533,7 +536,7 @@ V.lainnya = () => {
     ${Store.meta.sheetUrl ? `<section class="card"><a class="menu-row" href="${E(Store.meta.sheetUrl)}" target="_blank" rel="noopener"><span class="todo-ic tone-ok">${I('table')}</span><div><b>Buka Google Sheet</b><small>Lihat dan backup data mentah</small></div>${I('chev', 'chev')}</a></section>` : ''}
     ${V.kopi()}
     <div style="text-align:center;margin-top:22px">${LOGO('welcome-mini')}</div>
-    <p class="hint" style="text-align:center;margin:6px 0 0">Arsip Jastip · versi 2.5</p>
+    <p class="hint" style="text-align:center;margin:6px 0 0">Arsip Jastip · versi 2.6</p>
     ${V.credit()}`;
 };
 
@@ -593,7 +596,7 @@ V.pengaturan = () => {
 V.welcome = () => {
   const step = App.ui.welcomeStep;
   if (step === 1) return `<div class="welcome">
-    ${LOGO('welcome-logo')}
+    ${V.art('sambut', 'welcome-ill')}
     <div class="steps" aria-hidden="true"><i class="on"></i><i></i></div>
     <h1>Selamat datang di <span>Arsip Jastip</span></h1>
     <p>Catat PO, siapa aja yang list, siapa yang udah bayar, sampai resi kiriman. Kenalan dulu, yuk.</p>
